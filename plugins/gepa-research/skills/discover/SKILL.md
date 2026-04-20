@@ -383,7 +383,7 @@ End the skill by reporting in chat:
 ```bash
 gepa-research get <id>                        # full experiment detail with scores
 gepa-research traces <id> <task>              # per-task trace
-gepa-research annotate <id> <task> "analysis" # record failure analysis
+gepa-research annotate <id> "analysis" --task <task>  # record failure analysis
 gepa-research scratchpad                      # full state: tree, best path, frontier, annotations, diffs, gates
 gepa-research gate list <id>                  # effective gates at a node (inherited)
 ```

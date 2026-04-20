@@ -4,7 +4,7 @@ import { defaultBackend } from "./backend.js";
  * Gate -- safety check reporting context.
  *
  * Usage:
- *   import { Gate } from 'evo-agent';
+ *   import { Gate } from 'gepa-research';
  *   const gate = new Gate();
  *   gate.check('5', { score: 1.0 });
  *   gate.check('9', { score: 0.3 });
@@ -15,8 +15,8 @@ export class Gate {
     this._threshold = threshold;
     this._backend = backend || defaultBackend();
     this._backend.setup({
-      tracesDir: process.env.EVO_TRACES_DIR,
-      experimentId: process.env.EVO_EXPERIMENT_ID,
+      tracesDir: process.env.GEPA_RESEARCH_TRACES_DIR,
+      experimentId: process.env.GEPA_RESEARCH_EXPERIMENT_ID,
     });
     this._checks = [];
     this._finished = false;

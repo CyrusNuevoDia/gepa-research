@@ -1,21 +1,21 @@
-"""Tau-bench benchmark wrapper for evo.
+"""Tau-bench benchmark wrapper for gepa-research.
 
 Runs tau-bench tasks against the agent loaded from --agent, outputs
-evo-compatible JSON to stdout, and writes per-task traces to $EVO_TRACES_DIR
+gepa-research-compatible JSON to stdout, and writes per-task traces to $GEPA_RESEARCH_TRACES_DIR
 as each task completes (for live monitoring).
 
-Uses evo-agent's Run class for trace writing and score reporting.
+Uses gepa-research-agent's Run class for trace writing and score reporting.
 
 Configuration is loaded from config.json (co-located with this script),
 with environment variables as overrides.
 
 Environment overrides:
-    TAU3_DOMAIN       tau-bench domain
-    AGENT_MODEL       LLM model for the agent
-    TAU3_USER_MODEL   LLM model for the user simulator (defaults to AGENT_MODEL)
-    TAU3_SPLIT        task split to run
-    TAU3_CONCURRENCY  max concurrent tasks
-    EVO_TRACES_DIR    set by `evo run` -- directory for per-task trace files
+    TAU3_DOMAIN                 tau-bench domain
+    AGENT_MODEL                 LLM model for the agent
+    TAU3_USER_MODEL             LLM model for the user simulator (defaults to AGENT_MODEL)
+    TAU3_SPLIT                  task split to run
+    TAU3_CONCURRENCY            max concurrent tasks
+    GEPA_RESEARCH_TRACES_DIR    set by `gepa-research run` -- directory for per-task trace files
 """
 
 from __future__ import annotations
@@ -27,21 +27,21 @@ import os
 import sys
 from pathlib import Path
 
-from evo_agent import Run
+from gepa_research_agent import Run
 
 _HERE = Path(__file__).resolve().parent
 _CONFIG = json.loads((_HERE / "config.json").read_text(encoding="utf-8"))
 
 
 def load_agent_class(agent_path: str):
-    """Dynamically load EvoAgent from the given file path."""
+    """Dynamically load GEPAResearchAgent from the given file path."""
     spec = importlib.util.spec_from_file_location("tau3_agent", agent_path)
     if spec is None or spec.loader is None:
         raise RuntimeError(f"Could not load agent module from {agent_path}")
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
-    return module.EvoAgent
+    return module.GEPAResearchAgent
 
 
 def _extract_events(sim) -> list[dict]:
@@ -105,7 +105,7 @@ def main() -> None:
         _original_list_append = list.append
 
         class TracingList(list):
-            """A list that reports to evo-agent each time a simulation is appended."""
+            """A list that reports to gepa-research-agent each time a simulation is appended."""
 
             def append(self, sim):
                 _original_list_append(self, sim)
@@ -142,7 +142,7 @@ def main() -> None:
         )
 
         # tau-bench prints rich tables to stdout; redirect to stderr so only
-        # our JSON lands on stdout (required by evo's score parser).
+        # our JSON lands on stdout (required by gepa-research's score parser).
         real_stdout = sys.stdout
         sys.stdout = sys.stderr
         try:

@@ -1,4 +1,4 @@
-"""Unit tests for pure functions in evo.core.
+"""Unit tests for pure functions in gepa_research.core.
 
 Fast (millisecond) tests for logic that does not touch git, subprocess, or
 the filesystem. Complements the slower tests/e2e.py flow tests.
@@ -12,9 +12,9 @@ import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(REPO_ROOT / "plugins" / "evo" / "src"))
+sys.path.insert(0, str(REPO_ROOT / "plugins" / "gepa-research" / "src"))
 
-from evo.core import collect_gates_from_path, path_to_node  # noqa: E402
+from gepa_research.core import collect_gates_from_path, path_to_node  # noqa: E402
 
 
 def _graph(*nodes: dict) -> dict:

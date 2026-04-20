@@ -16,27 +16,27 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT / "sdk" / "python" / "src"))
 
-from evo_agent import Gate, Run  # noqa: E402
+from gepa_research_agent import Gate, Run  # noqa: E402
 
 
 @contextmanager
 def tmp_traces_dir():
-    with tempfile.TemporaryDirectory(prefix="evo-agent-test-") as d:
-        prev_traces = os.environ.get("EVO_TRACES_DIR")
-        prev_exp = os.environ.get("EVO_EXPERIMENT_ID")
-        os.environ["EVO_TRACES_DIR"] = d
-        os.environ["EVO_EXPERIMENT_ID"] = "exp-123"
+    with tempfile.TemporaryDirectory(prefix="gepa-research-agent-test-") as d:
+        prev_traces = os.environ.get("GEPA_RESEARCH_TRACES_DIR")
+        prev_exp = os.environ.get("GEPA_RESEARCH_EXPERIMENT_ID")
+        os.environ["GEPA_RESEARCH_TRACES_DIR"] = d
+        os.environ["GEPA_RESEARCH_EXPERIMENT_ID"] = "exp-123"
         try:
             yield Path(d)
         finally:
             if prev_traces is None:
-                os.environ.pop("EVO_TRACES_DIR", None)
+                os.environ.pop("GEPA_RESEARCH_TRACES_DIR", None)
             else:
-                os.environ["EVO_TRACES_DIR"] = prev_traces
+                os.environ["GEPA_RESEARCH_TRACES_DIR"] = prev_traces
             if prev_exp is None:
-                os.environ.pop("EVO_EXPERIMENT_ID", None)
+                os.environ.pop("GEPA_RESEARCH_EXPERIMENT_ID", None)
             else:
-                os.environ["EVO_EXPERIMENT_ID"] = prev_exp
+                os.environ["GEPA_RESEARCH_EXPERIMENT_ID"] = prev_exp
 
 
 @contextmanager

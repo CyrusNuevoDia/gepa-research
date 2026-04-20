@@ -1,4 +1,4 @@
-"""Tiny auto-harness-style target for evo dogfooding."""
+"""Tiny auto-harness-style target for gepa-research dogfooding."""
 
 AGENT_INSTRUCTION = """
 You are a helpful support assistant.

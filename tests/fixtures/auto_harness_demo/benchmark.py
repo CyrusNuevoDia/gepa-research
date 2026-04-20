@@ -73,7 +73,7 @@ def main() -> None:
     args = parser.parse_args()
 
     module = load_agent(Path(args.agent))
-    traces_dir = os.environ.get("EVO_TRACES_DIR")
+    traces_dir = os.environ.get("GEPA_RESEARCH_TRACES_DIR")
     if traces_dir:
         Path(traces_dir).mkdir(parents=True, exist_ok=True)
 

@@ -30,24 +30,24 @@ jobs:
       - name: Install build tooling
         run: python -m pip install --upgrade pip build
       - name: Build sdist + wheel
-        working-directory: plugins/evo
+        working-directory: plugins/gepa-research
         run: python -m build
       - name: Verify dashboard assets are in the wheel
-        working-directory: plugins/evo
+        working-directory: plugins/gepa-research
         run: |
           whl=$(ls dist/*.whl)
-          for f in evo/static/index.html evo/static/app.js evo/static/style.css; do
+          for f in gepa_research/static/index.html gepa_research/static/app.js gepa_research/static/style.css; do
             unzip -l "$whl" | awk '{print $NF}' | grep -qx "$f" || {
               echo "missing $f in $whl"; exit 1;
             }
           done
       - name: Smoke-test installed CLI
-        working-directory: plugins/evo
+        working-directory: plugins/gepa-research
         run: |
           python -m venv /tmp/smoke
           /tmp/smoke/bin/pip install dist/*.whl
-          /tmp/smoke/bin/evo --version
-          /tmp/smoke/bin/python -c "from evo import dashboard; from pathlib import Path; p = Path(dashboard.__file__).parent / 'static' / 'index.html'; assert p.exists(), p"
+          /tmp/smoke/bin/gepa-research --version
+          /tmp/smoke/bin/python -c "from gepa_research import dashboard; from pathlib import Path; p = Path(dashboard.__file__).parent / 'static' / 'index.html'; assert p.exists(), p"
 
   sdk-python:
     runs-on: ubuntu-latest

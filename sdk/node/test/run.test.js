@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { Run, Gate } from "../src/index.js";
 
 function withTmp(fn) {
-  const dir = mkdtempSync(join(tmpdir(), "evo-agent-test-"));
+  const dir = mkdtempSync(join(tmpdir(), "gepa-research-agent-test-"));
   try {
     return fn(dir);
   } finally {
@@ -31,8 +31,8 @@ function captureStdout(fn) {
 
 test("Run writes trace files and emits score JSON", async () => {
   await withTmp(async (dir) => {
-    process.env.EVO_TRACES_DIR = dir;
-    process.env.EVO_EXPERIMENT_ID = "exp-123";
+    process.env.GEPA_RESEARCH_TRACES_DIR = dir;
+    process.env.GEPA_RESEARCH_EXPERIMENT_ID = "exp-123";
     const run = new Run();
     run.log("0", "starting");
     run.log("0", { role: "user", content: "hi" });
@@ -55,8 +55,8 @@ test("Run writes trace files and emits score JSON", async () => {
     assert.equal(t1.status, "failed");
     assert.equal(t1.failure_reason, "bad");
 
-    delete process.env.EVO_TRACES_DIR;
-    delete process.env.EVO_EXPERIMENT_ID;
+    delete process.env.GEPA_RESEARCH_TRACES_DIR;
+    delete process.env.GEPA_RESEARCH_EXPERIMENT_ID;
   });
 });
 

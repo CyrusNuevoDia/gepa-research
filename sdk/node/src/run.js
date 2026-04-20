@@ -14,7 +14,7 @@ function utcNow() {
  *   Called once per task. Flushes accumulated logs into the trace file.
  *
  * Usage:
- *   import { Run } from 'evo-agent';
+ *   import { Run } from 'gepa-research';
  *   const run = new Run();
  *   run.log('0', 'starting task');
  *   run.report('0', { score: 1.0, summary: 'completed' });
@@ -23,10 +23,10 @@ function utcNow() {
 export class Run {
   constructor({ experimentId, backend } = {}) {
     this._experimentId =
-      experimentId || process.env.EVO_EXPERIMENT_ID || "unknown";
+      experimentId || process.env.GEPA_RESEARCH_EXPERIMENT_ID || "unknown";
     this._backend = backend || defaultBackend();
     this._backend.setup({
-      tracesDir: process.env.EVO_TRACES_DIR,
+      tracesDir: process.env.GEPA_RESEARCH_TRACES_DIR,
       experimentId: this._experimentId,
     });
     this._tasks = {};

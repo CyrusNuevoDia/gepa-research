@@ -1,6 +1,6 @@
-"""EvoAgent -- baseline agent for tau3 demo.
+"""GEPAResearchAgent -- baseline agent for tau3 demo.
 
-This is the file that evo optimizes. It wraps an LLM to handle
+This is the file that gepa-research optimizes. It wraps an LLM to handle
 customer-service tasks evaluated by the tau-bench benchmark.
 
 The optimization surface includes the system prompt, message
@@ -36,8 +36,8 @@ You are a helpful assistant that completes tasks according to the <policy> provi
 </policy>"""
 
 
-class EvoAgent(LLMConfigMixin, HalfDuplexAgent):
-    """Baseline agent under optimization by evo."""
+class GEPAResearchAgent(LLMConfigMixin, HalfDuplexAgent):
+    """Baseline agent under optimization by gepa-research."""
 
     def __init__(self, tools, domain_policy: str, llm: Optional[str] = None, llm_args: Optional[dict] = None):
         HalfDuplexAgent.__init__(self, tools=tools, domain_policy=domain_policy)

@@ -28,10 +28,10 @@ export class LocalBackend {
 }
 
 export function defaultBackend() {
-  if (process.env.EVO_SERVER) {
+  if (process.env.GEPA_RESEARCH_SERVER) {
     throw new Error(
-      `HTTP backend not yet available (EVO_SERVER=${process.env.EVO_SERVER}). ` +
-        "Use local mode by unsetting EVO_SERVER."
+      `HTTP backend not yet available (GEPA_RESEARCH_SERVER=${process.env.GEPA_RESEARCH_SERVER}). ` +
+        "Use local mode by unsetting GEPA_RESEARCH_SERVER."
     );
   }
   return new LocalBackend();

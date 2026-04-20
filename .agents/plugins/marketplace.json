@@ -1,14 +1,14 @@
 {
-  "name": "evo-hq",
+  "name": "CyrusNuevoDia",
   "interface": {
-    "displayName": "evo-hq"
+    "displayName": "CyrusNuevoDia"
   },
   "plugins": [
     {
-      "name": "evo",
+      "name": "gepa-research",
       "source": {
         "source": "local",
-        "path": "./plugins/evo"
+        "path": "./plugins/gepa-research"
       },
       "policy": {
         "installation": "AVAILABLE",

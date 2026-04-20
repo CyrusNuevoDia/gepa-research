@@ -1,7 +1,7 @@
 [project]
-name = "evo-hq-agent"
-version = "0.2.2"
-description = "Lightweight reporting SDK for evo experiments. Zero dependencies."
+name = "gepa-research-agent"
+version = "0.1.0"
+description = "Lightweight reporting SDK for GEPAResearch experiments. Zero dependencies."
 requires-python = ">=3.10"
 dependencies = []
 license = "Apache-2.0"
@@ -9,9 +9,9 @@ license-files = ["LICENSE"]
 readme = "README.md"
 
 [project.urls]
-Homepage = "https://github.com/evo-hq/evo"
-Repository = "https://github.com/evo-hq/evo"
-Issues = "https://github.com/evo-hq/evo/issues"
+Homepage = "https://github.com/CyrusNuevoDia/geparesearch"
+Repository = "https://github.com/CyrusNuevoDia/geparesearch"
+Issues = "https://github.com/CyrusNuevoDia/geparesearch/issues"
 
 [build-system]
 requires = ["setuptools>=68.0.0"]

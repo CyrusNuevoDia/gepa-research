@@ -1,0 +1,5 @@
+{
+  "name": "gepa-research",
+  "version": "0.1.0",
+  "description": "Research harness for optimizing code with the GEPA algorithm (LLM-driven genetic-Pareto search)."
+}

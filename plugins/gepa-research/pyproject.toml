@@ -1,0 +1,35 @@
+[project]
+name = "gepa-research-cli"
+version = "0.1.0"
+description = "Research harness for code optimization with the GEPA algorithm: git worktrees, traces, local dashboard, and a GEPA-backed search loop."
+requires-python = ">=3.10"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
+readme = "README.md"
+dependencies = [
+  "flask>=3.0.0",
+  "pyyaml>=6.0.0",
+  "gepa>=0.1.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/CyrusNuevoDia/geparesearch"
+Repository = "https://github.com/CyrusNuevoDia/geparesearch"
+Issues = "https://github.com/CyrusNuevoDia/geparesearch/issues"
+
+[project.scripts]
+gepa-research = "gepa_research.cli:main"
+gepa-research-dashboard = "gepa_research.dashboard:main"
+
+[build-system]
+requires = ["setuptools>=68.0.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+gepa_research = ["static/*"]

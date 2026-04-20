@@ -1,6 +1,6 @@
 # tau3 demo
 
-Real tau-bench fixture for testing evo on the same use case as auto-harness:
+Real tau-bench fixture for testing gepa-research on the same use case as auto-harness:
 optimizing an LLM agent on customer-service tasks (retail domain).
 
 ## Setup
@@ -26,8 +26,8 @@ optimizing an LLM agent on customer-service tasks (retail domain).
 
 4. Reset existing workspace and init for tau3:
    ```bash
-   uv run evo reset --yes
-   uv run evo init \
+   uv run gepa-research reset --yes
+   uv run gepa-research init \
      --target tests/fixtures/tau3_demo/agent/agent.py \
      --benchmark "python tests/fixtures/tau3_demo/benchmark.py --agent {target}" \
      --gate "python tests/fixtures/tau3_demo/gate.py --agent {target}" \
@@ -36,8 +36,8 @@ optimizing an LLM agent on customer-service tasks (retail domain).
 
 5. Run baseline:
    ```bash
-   uv run evo new --parent root -m "baseline"
-   uv run evo run exp_0000
+   uv run gepa-research new --parent root -m "baseline"
+   uv run gepa-research run exp_0000
    ```
 
 ## Configuration

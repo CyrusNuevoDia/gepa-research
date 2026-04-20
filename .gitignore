@@ -3,14 +3,14 @@ __pycache__/
 *.egg-info/
 SPEC.md
 _ref/
-.evo/experiments/
-.evo/worktrees/
-.evo/scratchpad.md
-.evo/infra_log.json
-.evo/*.lock
-.evo/dashboard.pid
-.evo/dashboard.port
-.evo_archive/
+.gepa-research/experiments/
+.gepa-research/worktrees/
+.gepa-research/scratchpad.md
+.gepa-research/infra_log.json
+.gepa-research/*.lock
+.gepa-research/dashboard.pid
+.gepa-research/dashboard.port
+.gepa-research_archive/
 
 # Build artifacts
 dist/

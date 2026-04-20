@@ -32,12 +32,12 @@ Run the skill end-to-end against a frozen pristine fixture. Assert high-level in
 **Per-skill assertions:**
 - Exit code is 0
 - No stream events with `type: "error"` or `subtype: "tool_error"`
-- `.evo/` directory was created
-- `.evo/run_0000/graph.json` exists and contains at least one non-root node
+- `.gepa-research/` directory was created
+- `.gepa-research/run_0000/graph.json` exists and contains at least one non-root node
 
 **Discover-specific invariants:**
 - Main branch HEAD is unchanged (pre-run SHA == post-run SHA) — the core "main stays pristine" property
-- At least one experiment branch exists (`evo/run_0000/exp_*`)
+- At least one experiment branch exists (`gepa-research/run_0000/exp_*`)
 - The experiment branch has at least 2 commits (benchmark + instrumentation minimum)
 - The experiment's status in `graph.json` is `committed`, `running`, or `finished` (not `discarded` or `failed`)
 - Baseline score is a number, not null
@@ -53,12 +53,12 @@ Level-1 tests use the real `claude` CLI via `--print --output-format stream-json
 
 Parse the stream-json transcript and assert specific tool-call patterns the skill *must* produce. More discriminating than Level 1 but still coarse enough to survive LLM variability.
 
-Examples for `/evo:discover`:
-- Agent runs `evo init` before `evo new` (temporal ordering)
-- Agent calls `evo gate add root` at least once
+Examples for `/gepa-research:discover`:
+- Agent runs `gepa-research init` before `gepa-research new` (temporal ordering)
+- Agent calls `gepa-research gate add root` at least once
 - Agent runs the benchmark at least 3 times before the first baseline commit (determinism check)
-- Agent writes files inside `worktrees/exp_*` but not in the repo root after `evo init`
-- Agent calls either `evo done <id> --score <num>` or explicitly justifies skipping
+- Agent writes files inside `worktrees/exp_*` but not in the repo root after `gepa-research init`
+- Agent calls either `gepa-research done <id> --score <num>` or explicitly justifies skipping
 
 Each assertion is a function that takes the parsed event list and returns pass/fail + a diagnostic. Failures emit the relevant event window so the PR reviewer can see what happened.
 
@@ -82,7 +82,7 @@ For sweeping rewrites (like this one), nothing replaces eyeballing the transcrip
 LLM outputs aren't bit-identical run-to-run, even at `temperature: 0`. We accept this and design assertions that are invariant to ordering noise and phrasing choices:
 
 - Assert on the *set* of commands executed, not the exact sequence
-- Use regex matching (`r"evo init\b"`) not string equality
+- Use regex matching (`r"gepa-research init\b"`) not string equality
 - Set high minimum thresholds, not exact counts (`commits >= 2`, not `commits == 3`)
 - Allow the agent to discover correct behavior through trial-and-error within `--max-turns`
 - Use the same `--model` for every run (pin to a stable Sonnet minor version if possible)
@@ -116,8 +116,8 @@ tests/skills/
 │   └── pristine_node/                # TODO: equivalent for Node SDK testing
 ├── static/
 │   └── test_skill_structure.py       # Level 0
-├── test_discover.py                  # Level 1 + 2 for /evo:discover
-├── test_optimize.py                  # Level 1 + 2 for /evo:optimize
+├── test_discover.py                  # Level 1 + 2 for /gepa-research:discover
+├── test_optimize.py                  # Level 1 + 2 for /gepa-research:optimize
 └── judge/
     ├── rubric_discover.md            # Level 3 rubric
     └── eval.py                       # judge runner
@@ -139,7 +139,7 @@ class RunResult:
     def bash_commands(self) -> list[str]: ...
     def first_bash_matching(self, pattern: str) -> int | None: ...
     def files_written_matching(self, glob: str) -> list[Path]: ...
-    def experiments(self) -> list[dict]: ...   # parsed from .evo/run_*/graph.json
+    def experiments(self) -> list[dict]: ...   # parsed from .gepa-research/run_*/graph.json
 
 
 def run_skill(fixture: Path, skill: str, prompt: str, **flags) -> RunResult:
@@ -153,7 +153,7 @@ def test_discover_keeps_main_pristine(pristine_python, runner):
     result = runner(
         fixture=pristine_python,
         skill="discover",
-        prompt="Execute /evo:discover on this repository.",
+        prompt="Execute /gepa-research:discover on this repository.",
         max_turns=60,
     )
     assert result.exit_code == 0
@@ -162,8 +162,8 @@ def test_discover_keeps_main_pristine(pristine_python, runner):
 
 def test_discover_calls_init_before_new(pristine_python, runner):
     result = runner(fixture=pristine_python, skill="discover")
-    init_idx = result.first_bash_matching(r"evo init\b")
-    new_idx = result.first_bash_matching(r"evo new\b")
+    init_idx = result.first_bash_matching(r"gepa-research init\b")
+    new_idx = result.first_bash_matching(r"gepa-research new\b")
     assert init_idx is not None and new_idx is not None
     assert init_idx < new_idx
 ```
@@ -184,7 +184,7 @@ What we *can* assert is: the agent produces artifacts that satisfy our invariant
 
 Claude Code skills support `${CLAUDE_SKILL_DIR}`, `${CLAUDE_SESSION_ID}`, `$ARGUMENTS`, and similar substitutions. These are rendered into the skill content **before** it enters the model's context — but only when the skill is invoked via `/skill-name` or the Skill tool, *not* when the raw SKILL.md content is passed to `claude -p` as a prompt.
 
-If a test harness reads `SKILL.md` and hands its raw text to the agent (a convenient way to simulate `/evo:discover` in `-p` mode, where user-invoked slash commands aren't available), any `${CLAUDE_SKILL_DIR}` references will reach the agent unresolved. The agent will see the literal string and have to infer what it means.
+If a test harness reads `SKILL.md` and hands its raw text to the agent (a convenient way to simulate `/gepa-research:discover` in `-p` mode, where user-invoked slash commands aren't available), any `${CLAUDE_SKILL_DIR}` references will reach the agent unresolved. The agent will see the literal string and have to infer what it means.
 
 Three options:
 

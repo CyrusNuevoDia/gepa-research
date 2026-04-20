@@ -1,13 +1,13 @@
 {
-  "name": "evo-hq-evo",
+  "name": "CyrusNuevoDia-gepa-research",
   "owner": {
-    "name": "evo-hq"
+    "name": "CyrusNuevoDia"
   },
   "plugins": [
     {
-      "name": "evo",
-      "source": "./plugins/evo",
-      "description": "Structured experiment-driven code optimization using tree search and parallel subagents"
+      "name": "gepa-research",
+      "source": "./plugins/gepa-research",
+      "description": "Research harness for optimizing code with the GEPA algorithm (LLM-driven genetic-Pareto search)."
     }
   ]
 }

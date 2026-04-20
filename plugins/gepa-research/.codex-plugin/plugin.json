@@ -1,0 +1,13 @@
+{
+  "name": "gepa-research",
+  "version": "0.1.0",
+  "description": "Research harness for optimizing code with the GEPA algorithm (LLM-driven genetic-Pareto search).",
+  "author": {
+    "name": "CyrusNuevoDia",
+    "url": "https://github.com/CyrusNuevoDia"
+  },
+  "homepage": "https://github.com/CyrusNuevoDia/geparesearch",
+  "repository": "https://github.com/CyrusNuevoDia/geparesearch",
+  "license": "Apache-2.0",
+  "skills": "./skills/"
+}

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Assert evo-hq-cli, claude-plugin, and codex-plugin versions all match.
+"""Assert gepa-research-cli, claude-plugin, and codex-plugin versions all match.
 
 Runs in CI (and locally) to prevent a release where the CLI was bumped
 but the plugin manifests were not (or vice versa). Claude Code and
@@ -20,20 +20,18 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 SOURCES = [
-    ("plugins/evo/pyproject.toml", "pyproject.toml (evo-hq-cli)"),
-    ("plugins/evo/src/evo/__init__.py", "evo/__init__.__version__ (read by `evo --version`)"),
-    ("plugins/evo/.claude-plugin/plugin.json", "Claude Code plugin manifest"),
-    ("plugins/evo/.codex-plugin/plugin.json", "Codex plugin manifest"),
-    ("sdk/python/pyproject.toml", "pyproject.toml (evo-hq-agent)"),
-    ("sdk/python/src/evo_agent/__init__.py", "evo_agent/__init__.__version__"),
-    ("sdk/node/package.json", "package.json (@evo-hq/evo-agent)"),
+    ("plugins/gepa-research/pyproject.toml", "pyproject.toml (gepa-research-cli)"),
+    ("plugins/gepa-research/src/gepa_research/__init__.py", "gepa_research/__init__.__version__ (read by `gepa-research --version`)"),
+    ("plugins/gepa-research/.claude-plugin/plugin.json", "Claude Code plugin manifest"),
+    ("plugins/gepa-research/.codex-plugin/plugin.json", "Codex plugin manifest"),
+    ("sdk/python/pyproject.toml", "pyproject.toml (gepa-research-agent)"),
+    ("sdk/python/src/gepa_research_agent/__init__.py", "gepa_research_agent/__init__.__version__"),
+    ("sdk/node/package.json", "package.json (gepa-research npm)"),
 ]
 
 
 def read_pyproject_version(path: Path) -> str:
     text = path.read_text(encoding="utf-8")
-    # Top-level [project] version. Use a regex to avoid a tomllib dep so
-    # the script runs on any Python 3.8+.
     match = re.search(
         r'^\[project\].*?^version\s*=\s*"([^"]+)"',
         text,

@@ -1,7 +1,3 @@
-<p align="center">
-  <img src="assets/banner.png" alt="GEPAResearch banner" width="100%" />
-</p>
-
 # GEPAResearch
 
 A plugin for your agentic framework that optimizes code using the [GEPA](https://github.com/gepa-ai/gepa) algorithm (Genetic-Pareto LLM-driven search). Currently supported on [Claude Code](https://docs.anthropic.com/en/docs/claude-code), [Codex](https://developers.openai.com/codex), [OpenClaw](https://github.com/openclaw/openclaw), and [Hermes](https://github.com/NousResearch/hermes-agent).

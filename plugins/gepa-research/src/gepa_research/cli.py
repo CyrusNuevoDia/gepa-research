@@ -286,10 +286,6 @@ def init(
     objective: Annotated[Optional[str], typer.Option("--objective", help="Natural-language goal passed to GEPA's reflection LM.")] = None,
     background: Annotated[Optional[str], typer.Option("--background", help="Domain knowledge / constraints passed to GEPA's reflection LM.")] = None,
     reflection_lm: Annotated[Optional[str], typer.Option("--reflection-lm", help="Default reflection LM (e.g. anthropic/claude-opus-4-7).")] = None,
-    num_parallel_proposals: Annotated[
-        Optional[int],
-        typer.Option("--num-parallel-proposals", help="Default candidate-level concurrency for `optimize` (evaluated in separate worktrees)."),
-    ] = None,
 ) -> None:
     root = repo_root()
     run_id = init_workspace(root, target=target, benchmark=benchmark, metric=metric.value, gate=gate)
@@ -298,7 +294,7 @@ def init(
         meta = json.loads(meta_file.read_text(encoding="utf-8"))
         meta["instrumentation_mode"] = instrumentation_mode.value
         atomic_write_json(meta_file, meta)
-    if objective or background or reflection_lm or num_parallel_proposals:
+    if objective or background or reflection_lm:
         cfg = load_config(root)
         if objective:
             cfg["optimization_objective"] = objective
@@ -306,8 +302,6 @@ def init(
             cfg["background"] = background
         if reflection_lm:
             cfg["reflection_lm"] = reflection_lm
-        if num_parallel_proposals:
-            cfg["num_parallel_proposals"] = int(num_parallel_proposals)
         save_config(root, cfg)
     write_scratchpad(root)
     _start_dashboard_background(root, port=port)
@@ -925,10 +919,6 @@ def gate_remove_cmd(
 def optimize(
     max_metric_calls: Annotated[int, typer.Option("--max-metric-calls", help="GEPA evaluator-call budget.")] = 50,
     stall: Annotated[int, typer.Option("--stall", help="Consecutive iterations without improvement before auto-stop.")] = 5,
-    num_parallel_proposals: Annotated[
-        Optional[int],
-        typer.Option("--num-parallel-proposals", help="Evaluate N candidates per GEPA iteration concurrently, each in its own worktree. Default: config.json value or 1."),
-    ] = None,
     reflection_lm: Annotated[Optional[str], typer.Option("--reflection-lm")] = None,
     objective: Annotated[Optional[str], typer.Option("--objective")] = None,
     background: Annotated[Optional[str], typer.Option("--background")] = None,
@@ -948,17 +938,10 @@ def optimize(
         raise typer.Exit(code=1)
 
     parent_id = best["id"]
-    num_parallel = num_parallel_proposals
-    if num_parallel is None:
-        num_parallel = int(config.get("num_parallel_proposals", 1))
-    if num_parallel < 1:
-        print("ERROR: --num-parallel-proposals must be >= 1", file=sys.stderr)
-        raise typer.Exit(code=1)
 
     print(
         f"gepa-research optimize: seed={parent_id} score={best.get('score')} "
-        f"max-metric-calls={max_metric_calls} stall={stall} "
-        f"num-parallel-proposals={num_parallel}"
+        f"max-metric-calls={max_metric_calls} stall={stall}"
     )
 
     result = run_gepa_optimize(
@@ -966,7 +949,6 @@ def optimize(
         parent_id=parent_id,
         max_metric_calls=max_metric_calls,
         stall=stall,
-        num_parallel_proposals=num_parallel,
         reflection_lm=reflection_lm,
         objective=objective,
         background=background,

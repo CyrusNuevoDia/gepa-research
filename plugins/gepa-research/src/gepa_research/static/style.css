@@ -129,7 +129,7 @@ body {
 .hero-delta {
   font-family: 'JetBrains Mono', monospace;
   font-size: 13px;
-  color: var(--green);
+  color: var(--text-4);
 }
 .hero-sub {
   font-size: 11px;
@@ -278,6 +278,7 @@ body {
 .filter-pill.skip { background: rgba(63,63,70,0.2); color: var(--text-4); }
 .filter-pill.err { background: rgba(239,68,68,0.08); color: var(--red); }
 .filter-pill.active-f { background: rgba(59,130,246,0.08); color: var(--blue); }
+.filter-pill.pill-off { opacity: 0.45; text-decoration: line-through; }
 
 .table-head-row {
   display: flex;

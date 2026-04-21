@@ -11,7 +11,6 @@ from __future__ import annotations
 import json
 import os
 import subprocess
-import threading
 from pathlib import Path
 from typing import Any
 
@@ -39,6 +38,12 @@ from .locking import advisory_lock
 
 
 _DEFAULT_BENCHMARK_TIMEOUT = 900  # seconds; per-candidate
+
+# Value returned to GEPA on any candidate failure (apply / timeout / non-zero
+# exit / parse / gate). GEPA's pareto-front tracking assumes higher is better;
+# we want failures to be the worst-possible outcome regardless of the run's
+# metric direction, so the pareto front never elevates a crashed candidate.
+_GEPA_WORST = -1e12
 
 
 def _write_candidate(worktree: Path, candidate: dict[str, str], target_relpath: str) -> None:
@@ -118,7 +123,7 @@ class GepaResearchAdapter:
         except Exception as exc:  # noqa: BLE001
             side_info["error"] = f"apply_candidate_failed: {exc}"
             self._mark_failed(exp_id, score=0.0, error=side_info["error"])
-            return 0.0, side_info
+            return _GEPA_WORST, side_info
 
         attempt_n = 1
 
@@ -146,7 +151,7 @@ class GepaResearchAdapter:
             side_info["error"] = "benchmark_timeout"
             side_info["stderr"] = ""
             self._mark_failed(exp_id, score=0.0, error="benchmark_timeout")
-            return 0.0, side_info
+            return _GEPA_WORST, side_info
 
         side_info["stdout"] = bench.stdout[-4000:] if bench.stdout else ""
         side_info["stderr"] = bench.stderr[-4000:] if bench.stderr else ""
@@ -154,14 +159,14 @@ class GepaResearchAdapter:
         if bench.returncode != 0:
             side_info["error"] = f"benchmark_exit_{bench.returncode}"
             self._mark_failed(exp_id, score=0.0, error=side_info["error"])
-            return 0.0, side_info
+            return _GEPA_WORST, side_info
 
         try:
             score, parsed = parse_score(bench.stdout)
         except ValueError as exc:
             side_info["error"] = f"parse_score_failed: {exc}"
             self._mark_failed(exp_id, score=0.0, error=side_info["error"])
-            return 0.0, side_info
+            return _GEPA_WORST, side_info
 
         side_info["benchmark_result"] = parsed
 
@@ -185,7 +190,7 @@ class GepaResearchAdapter:
         if gate_failures:
             side_info["gate_failures"] = gate_failures
             self._mark_evaluated(exp_id, score=score, gate_passed=False, gate_failures=gate_failures, parsed=parsed)
-            return 0.0, side_info
+            return _GEPA_WORST, side_info
 
         # Per-task traces as compact side info for gepa's reflector.
         task_traces: list[dict[str, Any]] = []
@@ -213,7 +218,14 @@ class GepaResearchAdapter:
         else:
             self._mark_evaluated(exp_id, score=score, gate_passed=True, gate_failures=[], parsed=parsed)
 
-        return score, side_info
+        # GEPA's pareto-front tracking assumes higher is better
+        # (optimize_anything.py docstring: "All values must follow 'higher is
+        # better' convention"). For metric=min runs (e.g. val_bpb) we must
+        # negate the score handed back to GEPA so its parent selection picks
+        # the actual best, not the worst. The value stored in graph.json is
+        # the unmodified real score; only GEPA's internal view is flipped.
+        gepa_score = -score if metric == "min" else score
+        return gepa_score, side_info
 
     def _mark_evaluated(
         self, exp_id: str, *, score: float, gate_passed: bool, gate_failures: list[str], parsed: Any
@@ -281,88 +293,12 @@ def _write_progress(root: Path, updates: dict[str, Any]) -> dict[str, Any]:
         return current
 
 
-class GEPAProgressCallback:
-    """Write progress snapshots to ``.gepa-research/<run>/progress.json`` after
-    each GEPA event so the dashboard can show budget + stall + best-candidate
-    state live.
-
-    Safe under ``num_parallel_proposals > 1`` because all writes are serialized
-    through :func:`_write_progress`.
-    """
-
-    def __init__(
-        self,
-        root: Path,
-        *,
-        max_metric_calls: int,
-        stall_limit: int,
-        num_parallel_proposals: int,
-    ) -> None:
-        self._root = root
-        self._lock = threading.Lock()
-        self._stall_counter = 0
-        self._max = max_metric_calls
-        self._stall_limit = stall_limit
-        self._num_parallel = num_parallel_proposals
-
-    def on_optimization_start(self, event: dict) -> None:
-        _write_progress(
-            self._root,
-            {
-                "status": "running",
-                "max_metric_calls": self._max,
-                "stall_limit": self._stall_limit,
-                "num_parallel_proposals": self._num_parallel,
-                "metric_calls_used": 0,
-                "iterations_without_improvement": 0,
-                "best_candidate_idx": None,
-                "total_iterations": 0,
-            },
-        )
-
-    def on_iteration_end(self, event: dict) -> None:
-        with self._lock:
-            if event.get("proposal_accepted"):
-                self._stall_counter = 0
-            else:
-                self._stall_counter += 1
-            snapshot = {
-                "total_iterations": event.get("iteration"),
-                "iterations_without_improvement": self._stall_counter,
-            }
-        _write_progress(self._root, snapshot)
-
-    def on_budget_updated(self, event: dict) -> None:
-        used = event.get("metric_calls_used")
-        if used is None:
-            return
-        _write_progress(self._root, {"metric_calls_used": used})
-
-    def on_optimization_end(self, event: dict) -> None:
-        _write_progress(
-            self._root,
-            {
-                "status": "done",
-                "best_candidate_idx": event.get("best_candidate_idx"),
-                "total_iterations": event.get("total_iterations"),
-                "metric_calls_used": event.get("total_metric_calls"),
-            },
-        )
-
-    def on_error(self, event: dict) -> None:
-        # Don't flip status to "error" for per-iteration exceptions that GEPA
-        # logs but continues past. Just surface the last message.
-        exc = event.get("exception")
-        _write_progress(self._root, {"last_error": str(exc) if exc else None})
-
-
 def run_gepa_optimize(
     root: Path,
     *,
     parent_id: str,
     max_metric_calls: int = 50,
     stall: int = 5,
-    num_parallel_proposals: int = 1,
     objective: str | None = None,
     background: str | None = None,
     reflection_lm: str | None = None,
@@ -370,11 +306,6 @@ def run_gepa_optimize(
     """Hand the current workspace to ``gepa.optimize_anything`` and return the
     ``GEPAResult``.  All candidate evaluation, worktree allocation, and graph
     backporting is handled by :class:`GepaResearchAdapter`.
-
-    ``num_parallel_proposals`` > 1 runs N independent evaluate→propose→evaluate
-    pipelines concurrently per iteration (GEPA's built-in thread pool). Each
-    ``adapter.evaluate`` call allocates its own git worktree, and all
-    ``graph.json`` / ``progress.json`` writes are serialized via file locks.
     """
     # Imported lazily so the top-level module loads without gepa installed.
     from gepa.optimize_anything import (
@@ -400,7 +331,6 @@ def run_gepa_optimize(
         "max_metric_calls": max_metric_calls,
         "display_progress_bar": False,
         "parallel": True,
-        "num_parallel_proposals": num_parallel_proposals,
     }
     reflection_kwargs: dict[str, Any] = {}
     if reflection_lm:
@@ -413,20 +343,34 @@ def run_gepa_optimize(
             MaxMetricCallsStopper(max_metric_calls=max_metric_calls),
             NoImprovementStopper(max_iterations_without_improvement=stall),
         ),
-        callbacks=[
-            GEPAProgressCallback(
-                root,
-                max_metric_calls=max_metric_calls,
-                stall_limit=stall,
-                num_parallel_proposals=num_parallel_proposals,
-            )
-        ],
     )
 
-    return optimize_anything(
-        seed_candidate=seed,
-        evaluator=adapter.evaluate,
-        objective=objective or config.get("optimization_objective"),
-        background=background or config.get("background"),
-        config=gepa_config,
+    _write_progress(
+        root,
+        {
+            "status": "running",
+            "max_metric_calls": max_metric_calls,
+            "stall_limit": stall,
+            "metric_calls_used": 0,
+        },
     )
+    try:
+        result = optimize_anything(
+            seed_candidate=seed,
+            evaluator=adapter.evaluate,
+            objective=objective or config.get("optimization_objective"),
+            background=background or config.get("background"),
+            config=gepa_config,
+        )
+    except Exception as exc:
+        _write_progress(root, {"status": "error", "last_error": str(exc)})
+        raise
+    _write_progress(
+        root,
+        {
+            "status": "done",
+            "best_candidate_idx": getattr(result, "best_idx", None),
+            "metric_calls_used": getattr(result, "total_metric_calls", None),
+        },
+    )
+    return result

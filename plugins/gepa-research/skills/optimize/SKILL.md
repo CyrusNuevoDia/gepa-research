@@ -16,11 +16,10 @@ dashboard continues to render the lineage DAG.
 
 ## Configuration
 
-All arguments are optional. Invoked as `/optimize [max-metric-calls=N] [stall=N] [num-parallel-proposals=N] [reflection-lm=MODEL]`.
+All arguments are optional. Invoked as `/optimize [max-metric-calls=N] [stall=N] [reflection-lm=MODEL]`.
 
 - **max-metric-calls** — GEPA evaluator-call budget for this run (default: `50`).
 - **stall** — consecutive iterations without improvement before auto-stopping (default: `5`).
-- **num-parallel-proposals** — evaluate N candidates per GEPA iteration concurrently, each in its own worktree (default: `1`; or whatever `gepa-research init --num-parallel-proposals` persisted into `config.json`). GEPA's reflective proposer pre-samples N parent contexts sequentially, then runs N evaluate→propose→evaluate pipelines concurrently in a thread pool; acceptances are processed serially, so each iteration commits at most N new candidates. Each parallel proposal burns one reflection-LM call and one minibatch evaluation — scale `--max-metric-calls` accordingly.
 - **reflection-lm** — model string passed to `ReflectionConfig.reflection_lm` (default: gepa's default, currently `openai/gpt-5.1`). Use e.g. `anthropic/claude-opus-4-7` for Claude.
 
 The legacy `subagents`, `budget`, and per-subagent knobs are no longer accepted — GEPA owns the search strategy.
@@ -101,7 +100,6 @@ The optimize entry point wraps the full call:
 gepa-research optimize \
   --max-metric-calls 50 \
   --stall 5 \
-  --num-parallel-proposals 4 \
   [--reflection-lm anthropic/claude-opus-4-7]
 ```
 
@@ -117,9 +115,9 @@ experiment nodes appear in `graph.json`, and the BUDGET / STALL hero cards
 update from `.gepa-research/<run>/progress.json`. Surface the URL to the user
 if they don't already have it.
 
-Do not run multiple `gepa-research optimize` invocations concurrently — use
-`--num-parallel-proposals` instead. Two concurrent CLI invocations would race
-on graph/meta file locks and corrupt the lineage.
+Do not run multiple `gepa-research optimize` invocations concurrently against
+the same workspace — they would race on graph/meta file locks and corrupt the
+lineage.
 
 ### 5. Final summary
 

@@ -15,7 +15,28 @@ const state = {
   treeUserPanned: false, // true once user manually pans/zooms the tree
   tablePage: 0,
   tablePageSize: 10,
+  // Statuses whose rows are hidden from the table. Default: discarded,
+  // so user-triggered dismissals don't clutter the view. Click a filter
+  // pill to toggle.
+  hiddenStatuses: new Set(['discarded']),
 };
+
+// Filter-pill label → experiment status mapping.
+const PILL_STATUS = {
+  kept: 'committed',
+  skip: 'discarded',
+  err: 'failed',
+  'active-f': 'active',
+};
+
+function toggleStatusFilter(status) {
+  if (state.hiddenStatuses.has(status)) state.hiddenStatuses.delete(status);
+  else state.hiddenStatuses.add(status);
+  state.tablePage = 0;
+  renderTable();
+  renderTree();
+  renderChart();
+}
 
 // ─── Helpers ─────────────────────────────────────────────
 const STATUS_COLORS = {
@@ -85,9 +106,24 @@ function scoreDelta(node) {
   return sign + d.toFixed(2);
 }
 
+// Given a signed delta string and the run metric, return 'better', 'worse',
+// or 'same'. For metric='max' higher is better; for 'min' lower is better.
+function scoreDeltaDirection(deltaStr, metric) {
+  if (!deltaStr || deltaStr === '+0.00' || deltaStr === '-0.00') return 'same';
+  const isMax = (metric || 'max') === 'max';
+  const isPositive = deltaStr.startsWith('+');
+  return isPositive === isMax ? 'better' : 'worse';
+}
+
+function scoreDeltaColorVar(dir) {
+  return dir === 'better' ? 'var(--green)' :
+         dir === 'worse'  ? 'var(--red)'   : 'var(--text-4)';
+}
+
 function getExperiments() {
   return Object.values(state.graph.nodes)
     .filter(n => n.id !== 'root')
+    .filter(n => !state.hiddenStatuses.has(n.status))
     .sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
 }
 
@@ -187,9 +223,7 @@ function renderProgress() {
     budgetEl.textContent = `${used} / ${max}`;
     const pctUsed = max > 0 ? Math.min(100, (used / max) * 100) : 0;
     budgetFill.style.width = pctUsed + '%';
-    const parallel = p.num_parallel_proposals || 1;
-    const parallelNote = parallel > 1 ? ` · ${parallel}× parallel` : '';
-    budgetDetail.textContent = (p.status === 'done' ? 'finished' : 'metric calls') + parallelNote;
+    budgetDetail.textContent = p.status === 'done' ? 'finished' : 'metric calls';
   }
 
   if (p.stall_limit == null) {
@@ -212,12 +246,18 @@ function renderHero() {
   document.getElementById('best-score').textContent =
     s.best_score != null ? s.best_score.toFixed(2) : '--';
 
+  const deltaEl = document.getElementById('score-delta');
   if (s.baseline_score != null && s.best_score != null && s.baseline_score !== s.best_score) {
-    const improvement = ((s.best_score - s.baseline_score) / s.baseline_score * 100);
-    document.getElementById('score-delta').textContent = '+' + Math.round(improvement) + '%';
+    const raw = ((s.best_score - s.baseline_score) / s.baseline_score * 100);
+    // Flip so a positive number always means "got better", regardless of metric.
+    const improvement = (s.metric === 'min') ? -raw : raw;
+    const sign = improvement >= 0 ? '+' : '';
+    deltaEl.textContent = sign + Math.round(improvement) + '%';
+    deltaEl.style.color = improvement >= 0 ? 'var(--green)' : 'var(--red)';
     document.getElementById('baseline-info').textContent = 'from ' + s.baseline_score.toFixed(2) + ' baseline';
   } else {
-    document.getElementById('score-delta').textContent = '';
+    deltaEl.textContent = '';
+    deltaEl.style.color = '';
     document.getElementById('baseline-info').textContent = '';
   }
 
@@ -438,10 +478,14 @@ function renderTree() {
   const nodes = state.graph.nodes;
   if (!nodes.root) return;
 
-  // Build hierarchy
+  // Build hierarchy. Honor state.hiddenStatuses so the lineage view stays in
+  // sync with the table/chart filters. A child whose status is hidden is
+  // omitted entirely; its own children are also dropped (hiding a node
+  // implies hiding the subtree it anchors). Root is never filtered.
   function buildChildren(nodeId) {
     const node = nodes[nodeId];
     if (!node) return null;
+    if (nodeId !== 'root' && state.hiddenStatuses.has(node.status)) return null;
     const children = (node.children || [])
       .map(cid => buildChildren(cid))
       .filter(Boolean);
@@ -579,11 +623,17 @@ function renderTree() {
 function renderTable() {
   const s = state.stats;
   const filters = document.getElementById('table-filters');
+  const pillHtml = (cls, label, count) => {
+    const status = PILL_STATUS[cls];
+    const hidden = state.hiddenStatuses.has(status);
+    const title = hidden ? `Click to show ${status} rows` : `Click to hide ${status} rows`;
+    return `<span class="filter-pill ${cls}${hidden ? ' pill-off' : ''}" onclick="toggleStatusFilter('${status}')" title="${title}">${label} ${count || 0}</span>`;
+  };
   filters.innerHTML =
-    `<span class="filter-pill kept">kept ${s.committed || 0}</span>` +
-    `<span class="filter-pill skip">skip ${s.discarded || 0}</span>` +
-    `<span class="filter-pill err">err ${s.failed || 0}</span>` +
-    `<span class="filter-pill active-f">active ${s.active || 0}</span>`;
+    pillHtml('kept', 'kept', s.committed) +
+    pillHtml('skip', 'skip', s.discarded) +
+    pillHtml('err', 'err', s.failed) +
+    pillHtml('active-f', 'active', s.active);
 
   const tbody = document.getElementById('table-body');
   const experiments = getExperiments();
@@ -593,10 +643,10 @@ function renderTable() {
   const start = state.tablePage * state.tablePageSize;
   const pageExps = experiments.slice(start, start + state.tablePageSize);
 
+  const rowMetric = state.stats.metric || 'max';
   tbody.innerHTML = pageExps.map(n => {
     const delta = scoreDelta(n);
-    const deltaClass = delta.startsWith('+') && delta !== '+0.00' ? 'color:var(--green)' :
-                       delta.startsWith('-') ? 'color:var(--red)' : 'color:var(--text-4)';
+    const deltaClass = 'color:' + scoreDeltaColorVar(scoreDeltaDirection(delta, rowMetric));
     const scoreHtml = n.score != null
       ? `<span class="score-val">${n.score.toFixed(2)}</span>${delta ? `<span class="score-delta" style="${deltaClass}">${delta}</span>` : ''}`
       : n.status === 'failed' ? '<span style="color:var(--red)">err</span>' : '<span style="color:var(--text-5)">&mdash;</span>';
@@ -660,8 +710,7 @@ async function openDrawer(expId) {
 
   const parent = state.graph.nodes[node.parent];
   const delta = scoreDelta(node);
-  const deltaColor = delta.startsWith('+') && delta !== '+0.00' ? 'var(--green)' :
-                     delta.startsWith('-') ? 'var(--red)' : 'var(--text-4)';
+  const deltaColor = scoreDeltaColorVar(scoreDeltaDirection(delta, state.stats.metric));
   const statusColor = STATUS_COLORS[node.status] || '#52525b';
 
   let html = `

@@ -438,6 +438,50 @@ def test_retry_cap_and_fix(root: Path) -> None:
     assert load_outcome(root, "exp_0003", 2)["outcome"] == "committed"
 
 
+def test_optimize_smoke(root: Path) -> None:
+    """Hermetic smoke test for `gepa-research optimize`.
+
+    Budget of 1 metric call means the stopper fires after seed evaluation,
+    before any reflection LM call — so this runs without an API key.
+    """
+    gepa_research(
+        [
+            "init",
+            "--target",
+            "agent.py",
+            "--benchmark",
+            "python eval.py --agent {target}",
+            "--metric",
+            "max",
+        ],
+        cwd=root,
+    )
+    gepa_research(["new", "--parent", "root", "-m", "baseline"], cwd=root)
+    write(root / ".gepa-research" / "run_0000" / "worktrees" / "exp_0000" / "agent.py", 'STATE = "GOOD"\n')
+    baseline = gepa_research(["run", "exp_0000"], cwd=root)
+    assert "COMMITTED exp_0000 1.0" in baseline.stdout
+
+    result = gepa_research(
+        ["optimize", "--max-metric-calls", "1", "--stall", "0"],
+        cwd=root,
+    )
+    summary = parse_last_json_blob(result.stdout)
+    assert summary["total_metric_calls"] == 1, f"reflection should not fire with budget=1: {summary!r}"
+    assert summary["num_candidates"] >= 1
+
+    graph = load_graph(root)
+    assert graph["nodes"]["exp_0000"]["status"] == "committed"
+    assert graph["nodes"]["exp_0000"]["score"] == 1.0
+    seed_eval = graph["nodes"].get("exp_0001")
+    assert seed_eval is not None, "optimize should allocate a node for the seed evaluation"
+    assert seed_eval["status"] in {"committed", "evaluated"}
+    assert seed_eval["score"] == 1.0
+
+    progress = json.loads((root / ".gepa-research" / "run_0000" / "progress.json").read_text(encoding="utf-8"))
+    assert progress["status"] == "done"
+    assert progress["metric_calls_used"] == 1
+
+
 def main() -> None:
     temp_root = Path(tempfile.mkdtemp(prefix="gepa-research-e2e-"))
     try:
@@ -469,6 +513,12 @@ def main() -> None:
         init_repo(retry_repo)
         setup_max_repo(retry_repo)
         test_retry_cap_and_fix(retry_repo)
+
+        smoke_repo = temp_root / "optimize-smoke-repo"
+        smoke_repo.mkdir()
+        init_repo(smoke_repo)
+        setup_max_repo(smoke_repo)
+        test_optimize_smoke(smoke_repo)
     finally:
         shutil.rmtree(temp_root, ignore_errors=True)
 

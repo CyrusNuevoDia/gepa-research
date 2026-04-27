@@ -10,6 +10,8 @@ You give it a codebase. It discovers metrics to optimize, sets up the evaluation
 - **Observability.** A local dashboard renders the candidate lineage DAG (from `GEPAResult.parents`) and per-task traces.
 - **Benchmark discovery.** The `discover` skill explores the repo, figures out what to measure, and instruments the evaluation.
 
+![screenshot](./assets/screenshot.png)
+
 ## Install
 
 Common: `git`, [uv](https://docs.astral.sh/uv/), Python 3.10+.

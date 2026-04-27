@@ -1,4 +1,4 @@
-// Node SDK usage example. Install: `npm install gepa-research`.
+// Node SDK usage example. Install: `git clone https://github.com/CyrusNuevoDia/gepa-research /tmp/gepa-research && npm install /tmp/gepa-research/sdk/node` (npm does not natively support subdirectory git installs).
 //
 // The SDK auto-reads $GEPA_RESEARCH_TRACES_DIR and $GEPA_RESEARCH_EXPERIMENT_ID. Traces flush
 // on each report() so the dashboard can stream progress live.

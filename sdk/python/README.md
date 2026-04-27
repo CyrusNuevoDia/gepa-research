@@ -1,14 +1,18 @@
 # gepa-research-agent (Python SDK)
 
-Lightweight reporting SDK for [GEPAResearch](https://github.com/CyrusNuevoDia/geparesearch) experiments. Zero dependencies, Python 3.10+.
+Lightweight reporting SDK for [GEPAResearch](https://github.com/CyrusNuevoDia/gepa-research) experiments. Zero dependencies, Python 3.10+.
 
 Mirrors the [`gepa-research`](https://www.npmjs.com/package/gepa-research) Node SDK surface: `Run` for per-task logging + scoring, `Gate` for safety checks with exit codes.
 
 ## Install
 
+Install directly from this GitHub repo (the SDK package lives in the `sdk/python/` subdirectory of the monorepo and is not published to PyPI):
+
 ```bash
-pip install gepa-research-agent
+pip install "git+https://github.com/CyrusNuevoDia/gepa-research#subdirectory=sdk/python"
 ```
+
+To pin a release, append `@<tag>` to the URL: `...gepa-research@v0.2.2#subdirectory=sdk/python`.
 
 Install name and import name differ (same pattern as `python-dateutil` / `dateutil`):
 
@@ -53,7 +57,7 @@ with Gate() as gate:
 
 ## Environment
 
-- `GEPA_RESEARCH_TRACES_DIR`   directory where `task_<id>.json` files are written (set by `gepa-research run`)
-- `GEPA_RESEARCH_EXPERIMENT_ID`  experiment label embedded in each trace
+- `GEPA_RESEARCH_TRACES_DIR` directory where `task_<id>.json` files are written (set by `gepa-research run`)
+- `GEPA_RESEARCH_EXPERIMENT_ID` experiment label embedded in each trace
 
 Both are set automatically when the gepa-research CLI spawns your benchmark. Missing vars are tolerated -- traces are just skipped.

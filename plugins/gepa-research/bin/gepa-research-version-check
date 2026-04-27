@@ -59,11 +59,11 @@ gepa-research-version-check: plugin manifest and installed CLI disagree.
   plugin manifest : $PLUGIN_VERSION   ($MANIFEST)
   installed CLI   : $CLI_VERSION   (gepa-research --version)
 
-The host has refetched a newer/older plugin than the CLI on PATH. Update the CLI to match:
+The host has refetched a newer/older plugin than the CLI on PATH. Update the CLI to match by reinstalling from GitHub at the matching tag:
 
-  uv tool install --force gepa-research-cli==$PLUGIN_VERSION
+  uv tool install --force "git+https://github.com/CyrusNuevoDia/gepa-research@v$PLUGIN_VERSION#subdirectory=plugins/gepa-research"
     or
-  pipx install --force gepa-research-cli==$PLUGIN_VERSION
+  pipx install --force "git+https://github.com/CyrusNuevoDia/gepa-research@v$PLUGIN_VERSION#subdirectory=plugins/gepa-research"
 
 Then re-invoke the skill.
 EOF

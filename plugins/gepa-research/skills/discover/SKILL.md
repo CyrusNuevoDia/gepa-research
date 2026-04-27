@@ -29,10 +29,10 @@ This wraps `gepa-research --version` and additionally asserts the installed CLI 
 Four outcomes to handle:
 
 1. **Exit 0, `gepa-research-version-check: OK (plugin=X, cli=X)`** -- continue to step 1.
-2. **Exit 1, "plugin manifest and installed CLI disagree"** -- stop and show the user the script's stderr verbatim; it tells them the `uv tool install --force gepa-research-cli==<version>` command to run. Then re-invoke this skill.
+2. **Exit 1, "plugin manifest and installed CLI disagree"** -- stop and show the user the script's stderr verbatim; it tells them the `uv tool install --force "git+https://github.com/CyrusNuevoDia/gepa-research@v<version>#subdirectory=plugins/gepa-research"` command to run. Then re-invoke this skill.
 3. **Exit 2, "gepa-research CLI not on PATH"** -- stop and tell the user:
-   > `gepa-research-cli` isn't on your PATH. Install it once: `uv tool install gepa-research-cli` (or `pipx install gepa-research-cli`). Then re-invoke this skill.
-4. **`gepa-research-version-check: command not found`** -- the host's plugin install is incomplete (missing the `bin/` wrapper). Fall back to running `gepa-research --version` directly and check for `gepa-research-cli` in the output; if it's a different package, tell the user to uninstall it and install `gepa-research-cli` in its place.
+   > `gepa-research-cli` isn't on your PATH. Install it once from GitHub: `uv tool install "git+https://github.com/CyrusNuevoDia/gepa-research#subdirectory=plugins/gepa-research"` (or substitute `pipx install` for `uv tool install`). Then re-invoke this skill.
+4. **`gepa-research-version-check: command not found`** -- the host's plugin install is incomplete (missing the `bin/` wrapper). Fall back to running `gepa-research --version` directly and check for `gepa-research-cli` in the output; if it's a different package, tell the user to uninstall it and install `gepa-research-cli` from GitHub in its place (`uv tool install "git+https://github.com/CyrusNuevoDia/gepa-research#subdirectory=plugins/gepa-research"`).
 
 Do not try to auto-install. Host sandbox + network policy may block it; leaving the install as a user action keeps failure modes clear.
 
@@ -101,7 +101,7 @@ For cases 2 and 3, ask once:
 
 > "I can wire up the benchmark in one of two ways:
 >
-> 1. **SDK mode** -- install the SDK (Python: `pip install gepa-research-agent` / Node: `npm install gepa-research`). Richer per-task logs, ~5 lines of user code.
+> 1. **SDK mode** -- install the SDK directly from this GitHub repo. Python: `pip install "git+https://github.com/CyrusNuevoDia/gepa-research#subdirectory=sdk/python"`. Node: `git clone https://github.com/CyrusNuevoDia/gepa-research /tmp/gepa-research && npm install /tmp/gepa-research/sdk/node` (npm has no native subdirectory-from-git install, so clone + local-path install is the canonical recipe). Richer per-task logs, ~5 lines of user code.
 > 2. **Inline mode** -- paste a ~30-line helper directly into the benchmark. Zero new dependencies. Same data contract."
 
 Pass the answer to `gepa-research init` via `--instrumentation-mode <sdk|inline>` in step 7. **Never install packages without this confirmation.** If you skip the question (case 1), still pass the detected mode to `gepa-research init` so optimize/subagent runs see a consistent value.

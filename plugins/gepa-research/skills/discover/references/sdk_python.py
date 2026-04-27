@@ -1,4 +1,4 @@
-"""Python SDK usage examples. Install: `pip install gepa-research-agent`.
+"""Python SDK usage examples. Install: `pip install "git+https://github.com/CyrusNuevoDia/gepa-research#subdirectory=sdk/python"`.
 
 The SDK auto-reads $GEPA_RESEARCH_TRACES_DIR and $GEPA_RESEARCH_EXPERIMENT_ID. Traces flush on
 each report() so the dashboard can stream progress live.

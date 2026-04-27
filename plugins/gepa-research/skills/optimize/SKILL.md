@@ -29,7 +29,7 @@ The legacy `subagents`, `budget`, and per-subagent knobs are no longer accepted 
 - Workspace must be initialized (`gepa-research status` should succeed).
 - A baseline experiment must be committed (run `/discover` first). GEPA's
   seed candidate is read from the current best committed node's target file.
-- `pip install gepa` (already listed in `plugins/gepa-research/pyproject.toml`).
+- The `gepa` library on the Python path (auto-installed as a transitive dependency when the CLI is installed from GitHub: `uv tool install "git+https://github.com/CyrusNuevoDia/gepa-research#subdirectory=plugins/gepa-research"`).
 - A reflection LM API key in the environment (OpenAI/Anthropic/etc., depending
   on the `reflection-lm` value). Without this the first GEPA iteration will fail.
 

@@ -15,9 +15,9 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/CyrusNuevoDia/geparesearch"
-Repository = "https://github.com/CyrusNuevoDia/geparesearch"
-Issues = "https://github.com/CyrusNuevoDia/geparesearch/issues"
+Homepage = "https://github.com/CyrusNuevoDia/gepa-research"
+Repository = "https://github.com/CyrusNuevoDia/gepa-research"
+Issues = "https://github.com/CyrusNuevoDia/gepa-research/issues"
 
 [project.scripts]
 gepa-research = "gepa_research.cli:main"

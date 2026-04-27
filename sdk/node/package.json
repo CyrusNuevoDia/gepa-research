@@ -12,20 +12,31 @@
       "import": "./src/index.js"
     }
   },
-  "files": ["src", "README.md", "LICENSE"],
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
   "engines": {
     "node": ">=18"
   },
   "scripts": {
     "test": "node --test test/*.test.js"
   },
-  "keywords": ["gepa", "gepa-research", "claude-code", "optimization", "experiments", "benchmarks"],
+  "keywords": [
+    "gepa",
+    "gepa-research",
+    "claude-code",
+    "optimization",
+    "experiments",
+    "benchmarks"
+  ],
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/CyrusNuevoDia/geparesearch.git",
+    "url": "https://github.com/CyrusNuevoDia/gepa-research.git",
     "directory": "sdk/node"
   },
-  "homepage": "https://github.com/CyrusNuevoDia/geparesearch#readme",
-  "bugs": "https://github.com/CyrusNuevoDia/geparesearch/issues"
+  "homepage": "https://github.com/CyrusNuevoDia/gepa-research#readme",
+  "bugs": "https://github.com/CyrusNuevoDia/gepa-research/issues"
 }

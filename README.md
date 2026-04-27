@@ -18,19 +18,22 @@ Common: `git`, [uv](https://docs.astral.sh/uv/), Python 3.10+.
 
 ### 1. Install the gepa-research CLI (non-Claude Code hosts)
 
-Claude Code bundles its own copy. Every other host calls `gepa-research` as an external binary:
+Claude Code bundles its own copy. Every other host calls `gepa-research` as an external binary. The CLI is not published to PyPI -- install it directly from this GitHub repo (the package lives in the `plugins/gepa-research/` subdirectory):
 
 ```bash
-uv tool install gepa-research-cli   # or: pipx install gepa-research-cli
-gepa-research --version              # gepa-research-cli 0.1.0
+uv tool install "git+https://github.com/CyrusNuevoDia/gepa-research#subdirectory=plugins/gepa-research"
+# or: pipx install "git+https://github.com/CyrusNuevoDia/gepa-research#subdirectory=plugins/gepa-research"
+gepa-research --version              # gepa-research-cli 0.2.2
 ```
+
+To pin a release, append `@<tag>` to the repo URL (e.g. `...gepa-research@v0.2.2#subdirectory=...`).
 
 ### 2. Add the plugin
 
 **Claude Code**
 
 ```
-/plugin marketplace add CyrusNuevoDia/geparesearch
+/plugin marketplace add CyrusNuevoDia/gepa-research
 /plugin install gepa-research@CyrusNuevoDia-gepa-research
 ```
 
@@ -39,7 +42,7 @@ Invoke: `/gepa-research:discover`, `/gepa-research:optimize`.
 **Codex** (requires 0.121.0-alpha.2 or newer -- `npm install -g @openai/codex@alpha` if you're on 0.120.0 stable)
 
 ```bash
-codex marketplace add CyrusNuevoDia/geparesearch
+codex marketplace add CyrusNuevoDia/gepa-research
 ```
 
 Then `/plugins` → `gepa-research` → install. Invoke: `$gepa-research discover`, `$gepa-research optimize`.
@@ -47,7 +50,7 @@ Then `/plugins` → `gepa-research` → install. Invoke: `$gepa-research discove
 **OpenClaw**
 
 ```bash
-openclaw plugins install gepa-research --marketplace https://github.com/CyrusNuevoDia/geparesearch
+openclaw plugins install gepa-research --marketplace https://github.com/CyrusNuevoDia/gepa-research
 ```
 
 Invoke: `/discover`, `/optimize`.
@@ -55,8 +58,8 @@ Invoke: `/discover`, `/optimize`.
 **Hermes** (per-skill install, no bundle support)
 
 ```bash
-hermes skills install CyrusNuevoDia/geparesearch/plugins/gepa-research/skills/discover --force
-hermes skills install CyrusNuevoDia/geparesearch/plugins/gepa-research/skills/optimize
+hermes skills install CyrusNuevoDia/gepa-research/plugins/gepa-research/skills/discover --force
+hermes skills install CyrusNuevoDia/gepa-research/plugins/gepa-research/skills/optimize
 ```
 
 `--force` on `discover` bypasses the SKILL.md scanner (it flags gepa-research's own install examples). Invoke: `/discover`, `/optimize`.
@@ -72,10 +75,10 @@ Invocation syntax depends on the host -- see the Install section above.
 
 `optimize` accepts optional parameters:
 
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `max-metric-calls` | 50 | Total evaluator calls GEPA may make this run |
-| `stall` | 5 | Consecutive iterations with no improvement before auto-stopping |
+| Parameter          | Default | Description                                                     |
+| ------------------ | ------- | --------------------------------------------------------------- |
+| `max-metric-calls` | 50      | Total evaluator calls GEPA may make this run                    |
+| `stall`            | 5       | Consecutive iterations with no improvement before auto-stopping |
 
 Example (Claude Code): `/gepa-research:optimize max-metric-calls=100 stall=10`. Other hosts use their own invocation prefix.
 
@@ -128,7 +131,7 @@ Dashboard live: http://127.0.0.1:8080 (pid 12345)
 If `8080` is busy, gepa-research auto-increments (`8081`, `8082`, ...) and prints the actual port. You can also start it manually:
 
 ```bash
-uv run --project /path/to/geparesearch/plugins/gepa-research gepa-research dashboard --port 8080
+uv run --project /path/to/gepa-research/plugins/gepa-research gepa-research dashboard --port 8080
 ```
 
 The chosen port is persisted to `.gepa-research/dashboard.port` so repeat runs re-use it.
@@ -138,8 +141,8 @@ The chosen port is persisted to `.gepa-research/dashboard.port` so repeat runs r
 For working on gepa-research itself (not just using it):
 
 ```bash
-git clone https://github.com/CyrusNuevoDia/geparesearch
-cd geparesearch
+git clone https://github.com/CyrusNuevoDia/gepa-research
+cd gepa-research
 uv run --project plugins/gepa-research gepa-research --version   # gepa-research-cli 0.2.2
 ```
 
@@ -154,6 +157,10 @@ The SDKs live in separate packages:
 
 - [ ] Distributed evaluation via [Harbor](https://github.com/harbor-framework/harbor) -- run benchmarks in containers instead of locally, use Harbor's cloud providers to parallelize.
 - [ ] Pareto-frontier visualization in the dashboard using `GEPAResult.per_val_instance_best_candidates`.
+
+## Acknowledgements
+
+GEPAResearch is a fork of [evoresearch](https://github.com/evo-hq/evo).
 
 ## License
 

@@ -6,9 +6,14 @@ Mirrors the `gepa-research-agent` Python SDK surface: `Run` for per-task logging
 
 ## Install
 
+The SDK is not published to npm. Install directly from this GitHub repo. npm does not natively support installing from a subdirectory of a git repo, so the canonical recipe is clone + local-path install:
+
 ```bash
-npm install gepa-research
+git clone https://github.com/CyrusNuevoDia/gepa-research /tmp/gepa-research
+npm install /tmp/gepa-research/sdk/node
 ```
+
+To pin a release, `cd /tmp/gepa-research && git checkout v0.2.2` before the `npm install` step.
 
 ## Usage
 

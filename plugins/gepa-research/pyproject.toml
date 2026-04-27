@@ -2,7 +2,7 @@
 name = "gepa-research-cli"
 version = "0.1.0"
 description = "Research harness for code optimization with the GEPA algorithm: git worktrees, traces, local dashboard, and a GEPA-backed search loop."
-requires-python = ">=3.10"
+requires-python = ">=3.10,<3.14"
 license = "Apache-2.0"
 license-files = ["LICENSE", "NOTICE"]
 readme = "README.md"

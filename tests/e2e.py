@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 import tempfile
@@ -438,6 +439,159 @@ def test_retry_cap_and_fix(root: Path) -> None:
     assert load_outcome(root, "exp_0003", 2)["outcome"] == "committed"
 
 
+def test_file_result_channel_wins_over_stdout_noise(root: Path) -> None:
+    """A benchmark that writes result.json + prints diagnostic prose to stdout
+    must be scored from the file, not from stdout."""
+    write(
+        root / "agent.py",
+        'STATE = "baseline"\n',
+    )
+    write(
+        root / "eval.py",
+        """from __future__ import annotations
+import json
+import os
+from pathlib import Path
+
+result_path = os.environ["GEPA_RESEARCH_RESULT_PATH"]
+Path(result_path).parent.mkdir(parents=True, exist_ok=True)
+Path(result_path).write_text(json.dumps({"score": 0.77, "tasks": {"0": 0.77}}))
+
+# Diagnostic prose. Pre-port this would've spuriously matched the loose
+# parse_score regex (`score: ...` line) and short-circuited to 0.99.
+print("INFO: starting evaluation")
+print("WARN: synthetic warning, score: 0.99 — should be ignored")
+print("DONE")
+""",
+    )
+    run(["git", "add", "."], cwd=root)
+    run(["git", "commit", "-m", "fixture: file channel"], cwd=root)
+
+    gepa_research(["init", "--target", "agent.py", "--benchmark", "python eval.py", "--metric", "max"], cwd=root)
+    gepa_research(["new", "--parent", "root", "-m", "baseline"], cwd=root)
+    out = gepa_research(["run", "exp_0000"], cwd=root)
+    assert "COMMITTED exp_0000 0.77" in out.stdout, out.stdout
+
+    graph = load_graph(root)
+    assert graph["nodes"]["exp_0000"]["score"] == 0.77
+    # Confirm the actual file was the source: outcome.benchmark.result must be
+    # the parsed file content, including 'tasks'.
+    outcome = load_outcome(root, "exp_0000", 1)
+    parsed = outcome["benchmark"]["result"]
+    assert parsed["score"] == 0.77
+    assert parsed["tasks"] == {"0": 0.77}
+
+
+def test_gate_env_stripped_so_benchmark_derived_gate_cant_clobber(root: Path) -> None:
+    """A benchmark-derived gate inheriting GEPA_RESEARCH_* would either
+    clobber the benchmark's result.json or fail-fast on its O_EXCL claim,
+    polluting attempt status. The gate-env strip in cli.cmd_run prevents both
+    by hiding GEPA_RESEARCH_RESULT_PATH (and the rest of the prefix) from
+    gate subprocesses."""
+    write(
+        root / "agent.py",
+        'STATE = "baseline"\n',
+    )
+    # Benchmark uses the file channel.
+    write(
+        root / "eval.py",
+        """from __future__ import annotations
+import json
+import os
+from pathlib import Path
+
+result_path = os.environ["GEPA_RESEARCH_RESULT_PATH"]
+Path(result_path).parent.mkdir(parents=True, exist_ok=True)
+Path(result_path).write_text(json.dumps({"score": 0.42, "tasks": {"0": 0.42}}))
+""",
+    )
+    # Gate that dumps its visible GEPA_RESEARCH_* env to a sidecar so the
+    # test can assert the strip happened. Also asserts the benchmark's
+    # result.json is unchanged before/after the gate runs.
+    write(
+        root / "gate_env_dump.py",
+        """from __future__ import annotations
+import json
+import os
+import sys
+from pathlib import Path
+
+env_dump = {k: v for k, v in os.environ.items() if k.startswith("GEPA_RESEARCH_")}
+sidecar = Path(os.environ.get("HOME", "/tmp")) / "gepa_research_gate_env_dump.json"
+sidecar.write_text(json.dumps(env_dump))
+sys.exit(0)
+""",
+    )
+    run(["git", "add", "."], cwd=root)
+    run(["git", "commit", "-m", "fixture: gate env"], cwd=root)
+
+    gepa_research(["init", "--target", "agent.py", "--benchmark", "python eval.py", "--metric", "max"], cwd=root)
+    gepa_research(["gate", "add", "root", "--name", "env_dump", "--command", "python gate_env_dump.py"], cwd=root)
+
+    gepa_research(["new", "--parent", "root", "-m", "baseline"], cwd=root)
+    out = gepa_research(["run", "exp_0000"], cwd=root)
+    assert "COMMITTED exp_0000 0.42" in out.stdout, out.stdout
+
+    sidecar = Path(os.environ.get("HOME", "/tmp")) / "gepa_research_gate_env_dump.json"
+    try:
+        env_dump = json.loads(sidecar.read_text(encoding="utf-8"))
+    finally:
+        sidecar.unlink(missing_ok=True)
+
+    # The whole prefix must be stripped. Specifically RESULT_PATH and TRACES_DIR
+    # are the dangerous ones; assert no GEPA_RESEARCH_* leaks at all.
+    assert env_dump == {}, f"gate inherited GEPA_RESEARCH_* env: {env_dump}"
+
+
+def test_optimize_uses_file_channel(root: Path) -> None:
+    """gepa_adapter.evaluate() must read from result.json when the benchmark
+    writes there, mirroring cli.cmd_run. Stdout-only benchmarks are exercised
+    by test_optimize_smoke; this test specifically covers the file path
+    through the adapter."""
+    write(
+        root / "agent.py",
+        'STATE = "GOOD"\n',
+    )
+    write(
+        root / "eval.py",
+        """from __future__ import annotations
+import json
+import os
+from pathlib import Path
+
+result_path = os.environ["GEPA_RESEARCH_RESULT_PATH"]
+Path(result_path).parent.mkdir(parents=True, exist_ok=True)
+# Score is 1.0 regardless of agent (we only need the smoke).
+Path(result_path).write_text(json.dumps({"score": 1.0, "tasks": {"0": 1.0}}))
+print("INFO: noisy stdout that should be ignored")
+""",
+    )
+    run(["git", "add", "."], cwd=root)
+    run(["git", "commit", "-m", "fixture: file-channel optimize"], cwd=root)
+
+    gepa_research(["init", "--target", "agent.py", "--benchmark", "python eval.py", "--metric", "max"], cwd=root)
+    gepa_research(["new", "--parent", "root", "-m", "baseline"], cwd=root)
+    baseline = gepa_research(["run", "exp_0000"], cwd=root)
+    assert "COMMITTED exp_0000 1.0" in baseline.stdout, baseline.stdout
+
+    result = gepa_research(
+        ["optimize", "--max-metric-calls", "1", "--stall", "0"],
+        cwd=root,
+    )
+    summary = parse_last_json_blob(result.stdout)
+    assert summary["total_metric_calls"] == 1, summary
+    assert summary["num_candidates"] >= 1
+
+    # The seed evaluation goes through gepa_adapter.evaluate() and must have
+    # picked up the file-written score, not parsed it from stdout. Stdout
+    # contains "INFO: noisy ..." which strict parse_score would reject.
+    graph = load_graph(root)
+    seed = graph["nodes"]["exp_0001"]
+    assert seed["status"] in {"committed", "evaluated"}, seed
+    assert seed["score"] == 1.0, seed
+    assert seed["benchmark_result"]["tasks"] == {"0": 1.0}, seed["benchmark_result"]
+
+
 def test_optimize_smoke(root: Path) -> None:
     """Hermetic smoke test for `gepa-research optimize`.
 
@@ -519,6 +673,21 @@ def main() -> None:
         init_repo(smoke_repo)
         setup_max_repo(smoke_repo)
         test_optimize_smoke(smoke_repo)
+
+        file_channel_repo = temp_root / "file-channel-repo"
+        file_channel_repo.mkdir()
+        init_repo(file_channel_repo)
+        test_file_result_channel_wins_over_stdout_noise(file_channel_repo)
+
+        gate_strip_repo = temp_root / "gate-strip-repo"
+        gate_strip_repo.mkdir()
+        init_repo(gate_strip_repo)
+        test_gate_env_stripped_so_benchmark_derived_gate_cant_clobber(gate_strip_repo)
+
+        adapter_file_repo = temp_root / "adapter-file-channel-repo"
+        adapter_file_repo.mkdir()
+        init_repo(adapter_file_repo)
+        test_optimize_uses_file_channel(adapter_file_repo)
     finally:
         shutil.rmtree(temp_root, ignore_errors=True)
 

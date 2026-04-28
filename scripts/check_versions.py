@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Assert gepa-research-cli, claude-plugin, and codex-plugin versions all match.
+"""Assert gepa-research-cli, plugin manifests, SDKs, and Pi package versions match.
 
 Runs in CI (and locally) to prevent a release where the CLI was bumped
-but the plugin manifests were not (or vice versa). Claude Code and
-Codex use the plugin manifest version to decide whether to refetch the
-plugin -- if only pyproject.toml bumps, installed hosts never see the
-new CLI.
+but the host package manifests were not (or vice versa). Claude Code and
+Codex use the plugin manifest version, and Pi uses the root package version,
+to decide whether to refetch the package -- if only pyproject.toml bumps,
+installed hosts never see the new CLI.
 
 Exit 0 on match, non-zero with a diagnostic on mismatch.
 """
@@ -20,6 +20,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 SOURCES = [
+    ("package.json", "package.json (Pi package)"),
     ("plugins/gepa-research/pyproject.toml", "pyproject.toml (gepa-research-cli)"),
     ("plugins/gepa-research/src/gepa_research/__init__.py", "gepa_research/__init__.__version__ (read by `gepa-research --version`)"),
     ("plugins/gepa-research/.claude-plugin/plugin.json", "Claude Code plugin manifest"),
@@ -86,7 +87,8 @@ def main() -> int:
         print(f"  {relpath:<{width}}  {version}  ({label})", file=sys.stderr)
     print(
         f"\nBump all {len(versions)} together. Claude Code / Codex key off the plugin "
-        "manifest version to decide whether to refetch the plugin -- bumping "
+        "manifest version and Pi packages key off the root package version "
+        "to decide whether to refetch -- bumping "
         "pyproject alone leaves installed hosts stuck on the old CLI.",
         file=sys.stderr,
     )

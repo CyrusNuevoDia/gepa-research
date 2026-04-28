@@ -12,7 +12,7 @@ dashboard continues to render the lineage DAG.
 
 ## Host conventions
 
-- **Slash commands shown in user-facing copy** (e.g. `/gepa-research:optimize`) — translate to your host's mention syntax when speaking to the user (e.g. `$gepa-research optimize` on Codex — plugin namespace then skill name, separated by a space).
+- **Slash commands shown in user-facing copy** (e.g. `/gepa-research:optimize`) — translate to your host's mention syntax when speaking to the user (e.g. `$gepa-research optimize` on Codex, `/skill:gepa-research-optimize` on Pi).
 
 ## Configuration
 
@@ -75,11 +75,12 @@ Run once per `/optimize` invocation:
 
 ```bash
 gepa-research status                         # confirms workspace exists + shows current best
-gepa-research-version-check                  # confirms CLI matches plugin manifest
+gepa-research-version-check                  # confirms CLI matches plugin manifest when wrapper is available
 ```
 
-If status shows no committed node, stop and tell the user to run `/discover`
-first.
+If `gepa-research-version-check` is not on PATH, run `gepa-research --version` instead and continue only if it prints `gepa-research-cli <version>`. This fallback is expected on hosts that load only skills and not plugin `bin/` wrappers. If `gepa-research` itself is missing, stop and tell the user to install the CLI with `uv tool install "git+https://github.com/CyrusNuevoDia/gepa-research#subdirectory=plugins/gepa-research"`.
+
+If status shows no committed node, stop and tell the user to run the discover skill first.
 
 ### 2. Resolve the reflection LM
 

@@ -14,7 +14,7 @@ This skill runs on any host that implements the Agent Skills spec. When the body
 
 - **"ask the user"** -- use your host's structured multi-choice question tool if you have one (e.g. `AskUserQuestion`, `request_user_input`). If the host has none, phrase the question as plain text in your next reply and wait for the user's answer.
 - **File paths like `references/...`** -- relative to this `SKILL.md`; resolve from the skill directory.
-- **Slash commands shown in user-facing copy** (e.g. `/gepa-research:discover`) -- translate to your host's mention syntax when speaking to the user (e.g. `$gepa-research discover` on Codex -- plugin namespace then skill name, separated by a space).
+- **Slash commands shown in user-facing copy** (e.g. `/gepa-research:discover`) -- translate to your host's mention syntax when speaking to the user (e.g. `$gepa-research discover` on Codex, `/skill:gepa-research-discover` on Pi).
 
 ## 0. Verify the gepa-research CLI is available and in sync with the plugin
 
@@ -24,7 +24,7 @@ Before anything else, run:
 gepa-research-version-check
 ```
 
-This wraps `gepa-research --version` and additionally asserts the installed CLI matches the plugin manifest version (hosts refetch the plugin on version bumps, but do not reinstall the globally-installed CLI -- drift between the two breaks skills silently).
+This wraps `gepa-research --version` and additionally asserts the installed CLI matches the plugin manifest version on hosts that expose the bundled wrapper (Claude Code, the Pi package extension, or any host that adds plugin `bin/` directories to `PATH`). Some per-skill hosts do not expose plugin `bin/` wrappers; handle that explicitly below.
 
 Four outcomes to handle:
 
@@ -32,7 +32,7 @@ Four outcomes to handle:
 2. **Exit 1, "plugin manifest and installed CLI disagree"** -- stop and show the user the script's stderr verbatim; it tells them the `uv tool install --force "git+https://github.com/CyrusNuevoDia/gepa-research@v<version>#subdirectory=plugins/gepa-research"` command to run. Then re-invoke this skill.
 3. **Exit 2, "gepa-research CLI not on PATH"** -- stop and tell the user:
    > `gepa-research-cli` isn't on your PATH. Install it once from GitHub: `uv tool install "git+https://github.com/CyrusNuevoDia/gepa-research#subdirectory=plugins/gepa-research"` (or substitute `pipx install` for `uv tool install`). Then re-invoke this skill.
-4. **`gepa-research-version-check: command not found`** -- the host's plugin install is incomplete (missing the `bin/` wrapper). Fall back to running `gepa-research --version` directly and check for `gepa-research-cli` in the output; if it's a different package, tell the user to uninstall it and install `gepa-research-cli` from GitHub in its place (`uv tool install "git+https://github.com/CyrusNuevoDia/gepa-research#subdirectory=plugins/gepa-research"`).
+4. **`gepa-research-version-check: command not found`** -- fall back to running `gepa-research --version` directly. If it prints `gepa-research-cli <version>`, continue; this is expected on hosts that load only skills and not plugin `bin/` wrappers. If `gepa-research` is also missing or is a different package, tell the user to install `gepa-research-cli` from GitHub (`uv tool install "git+https://github.com/CyrusNuevoDia/gepa-research#subdirectory=plugins/gepa-research"`).
 
 Do not try to auto-install. Host sandbox + network policy may block it; leaving the install as a user action keeps failure modes clear.
 

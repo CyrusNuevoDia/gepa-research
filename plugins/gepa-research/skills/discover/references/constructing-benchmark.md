@@ -48,10 +48,11 @@ Benchmark quality is dominated by test case quality. Cheap-but-wrong tests produ
 
 ## 3. Write the runnable harness
 
-Output contract (same as existing gepa-research benchmarks):
+Output contract (same as existing gepa-research benchmarks). The benchmark publishes the score on **either** of two channels — the runner accepts whichever is present, with the file taking precedence:
 
-- **stdout:** a single JSON object with a `score` field and optional `tasks` breakdown. Example: `{"score": 0.78, "tasks": {"0": 1.0, "1": 0.5, ...}}`
-- **stderr:** all other output (logs, progress, debug)
+- **`$GEPA_RESEARCH_RESULT_PATH`** (preferred): a single JSON object with a `score` field and optional `tasks` breakdown, written atomically. The SDK (`gepa-research-agent`) does this automatically when the env var is set; benchmarks using it can print freely to stdout. Example payload: `{"score": 0.78, "tasks": {"0": 1.0, "1": 0.5, ...}}`.
+- **stdout** (legacy fallback): the same single JSON object, used when `$GEPA_RESEARCH_RESULT_PATH` is unset or the file is absent. Strict — anything other than one valid JSON object with `score` will fail. Inline instrumentation templates currently use this mode; the SDK falls back to it automatically when the env var is unset.
+- **stderr:** all other output (logs, progress, debug). Free-form on either channel.
 - **exit code:** 0 on successful completion (even if score is low); non-zero only on infrastructure failure (import error, missing data, etc.)
 
 Use the SDK or inline instrumentation depending on the user's earlier choice (recorded in `.gepa-research/meta.json` as `instrumentation_mode`).

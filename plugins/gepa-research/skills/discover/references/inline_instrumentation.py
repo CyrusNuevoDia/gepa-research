@@ -4,11 +4,16 @@ Use this when the user declines the `gepa-research-agent` SDK. Paste the helper 
 the benchmark script and call `log_task()` + `write_result()` in place of
 the SDK's `Run` context manager. Zero new dependencies.
 
-Contract (same as the SDK):
+Contract:
 - Read GEPA_RESEARCH_TRACES_DIR and GEPA_RESEARCH_EXPERIMENT_ID from the environment.
 - Write task_<id>.json files into GEPA_RESEARCH_TRACES_DIR as each task finishes.
 - Print a single JSON object with a "score" field to stdout at the end.
-- All other output goes to stderr.
+
+Note: the SDK (`gepa-research-agent`) additionally writes the result JSON to
+GEPA_RESEARCH_RESULT_PATH when set, freeing stdout for diagnostic prose.
+This inline template still uses the stdout fallback only — port to the file
+channel if your benchmark needs to print debug context. The runner accepts
+either: file wins if present, otherwise stdout must be one JSON object.
 """
 
 from __future__ import annotations

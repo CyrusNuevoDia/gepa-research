@@ -50,6 +50,20 @@ def capture_stdout():
         sys.stdout = original
 
 
+@contextmanager
+def result_path_env(path: Path):
+    """Set GEPA_RESEARCH_RESULT_PATH for the file-channel tests, restoring after."""
+    prev = os.environ.get("GEPA_RESEARCH_RESULT_PATH")
+    os.environ["GEPA_RESEARCH_RESULT_PATH"] = str(path)
+    try:
+        yield
+    finally:
+        if prev is None:
+            os.environ.pop("GEPA_RESEARCH_RESULT_PATH", None)
+        else:
+            os.environ["GEPA_RESEARCH_RESULT_PATH"] = prev
+
+
 def test_run_writes_trace_files_and_emits_score_json() -> None:
     with tmp_traces_dir() as traces_dir, capture_stdout() as buf:
         # LocalBackend captures sys.stdout at Run() construction, so the
@@ -126,6 +140,100 @@ def test_gate_check_requires_score_or_passed() -> None:
     except ValueError:
         return
     raise AssertionError("expected ValueError when neither score nor passed given")
+
+
+# ---- file-channel: GEPA_RESEARCH_RESULT_PATH writes JSON + nothing to stdout
+
+def test_run_writes_to_file_when_result_path_env_set() -> None:
+    with tmp_traces_dir(), tempfile.TemporaryDirectory() as tmp, capture_stdout() as buf:
+        result_file = Path(tmp) / "result.json"
+        with result_path_env(result_file):
+            run = Run()
+            run.report("0", score=1.0)
+            run.report("1", score=0.4)
+            result = run.finish()
+
+        assert result_file.exists(), "result file should be written when env var set"
+        on_disk = json.loads(result_file.read_text(encoding="utf-8"))
+        assert on_disk["score"] == 0.7, on_disk
+        assert on_disk["tasks"] == {"0": 1.0, "1": 0.4}, on_disk["tasks"]
+        # File mode: nothing should hit stdout (so benchmarks can print freely).
+        assert buf.getvalue() == "", repr(buf.getvalue())
+        # finish() still returns the result dict to the caller.
+        assert result["score"] == 0.7
+
+
+def test_run_falls_back_to_stdout_when_env_unset() -> None:
+    # Sanity: existing stdout-mode behavior is unchanged when env var absent.
+    with tmp_traces_dir(), capture_stdout() as buf:
+        os.environ.pop("GEPA_RESEARCH_RESULT_PATH", None)  # ensure absent
+        run = Run()
+        run.report("0", score=0.5)
+        run.finish()
+        emitted = json.loads(buf.getvalue())
+        assert emitted["score"] == 0.5
+
+
+def test_run_creates_parent_dirs_for_result_path() -> None:
+    with tmp_traces_dir(), tempfile.TemporaryDirectory() as tmp, capture_stdout():
+        result_file = Path(tmp) / "deep" / "nested" / "result.json"
+        with result_path_env(result_file):
+            run = Run()
+            run.report("0", score=0.9)
+            run.finish()
+        assert result_file.exists(), "parent dirs should be auto-created"
+
+
+def test_second_writer_to_same_path_raises() -> None:
+    # Models a benchmark-derived gate that re-uses Run on the same attempt.
+    # First writer succeeds; second writer (different Run instance, same env)
+    # must fail fast on the O_EXCL claim rather than overwriting.
+    with tmp_traces_dir(), tempfile.TemporaryDirectory() as tmp, capture_stdout():
+        result_file = Path(tmp) / "result.json"
+        with result_path_env(result_file):
+            r1 = Run()
+            r1.report("0", score=1.0)
+            r1.finish()
+
+            r2 = Run()
+            r2.report("0", score=0.0)
+            try:
+                r2.finish()
+            except RuntimeError as exc:
+                assert "already exists" in str(exc)
+                # First writer's content must still be intact.
+                assert json.loads(result_file.read_text())["score"] == 1.0
+                return
+        raise AssertionError("expected RuntimeError on duplicate-writer claim")
+
+
+def test_finish_idempotent_with_file_channel() -> None:
+    # Same-instance double-finish must NOT trigger the O_EXCL guard:
+    # Run._finished short-circuits before emit_result is called.
+    with tmp_traces_dir(), tempfile.TemporaryDirectory() as tmp, capture_stdout():
+        result_file = Path(tmp) / "result.json"
+        with result_path_env(result_file):
+            run = Run()
+            run.report("0", score=0.6)
+            first = run.finish()
+            second = run.finish()
+            assert first["score"] == 0.6
+            assert second == {}, second  # no-op on second call
+            # File still has exactly the first write.
+            assert json.loads(result_file.read_text())["score"] == 0.6
+
+
+def test_no_partial_file_left_when_write_succeeds() -> None:
+    # tmp+rename: target is created via O_EXCL claim, content goes through
+    # a .tmp sibling, then atomic rename. Verify no .tmp file remains.
+    with tmp_traces_dir(), tempfile.TemporaryDirectory() as tmp, capture_stdout():
+        result_file = Path(tmp) / "result.json"
+        with result_path_env(result_file):
+            run = Run()
+            run.report("0", score=0.5)
+            run.finish()
+        siblings = sorted(p.name for p in Path(tmp).iterdir())
+        assert siblings == ["result.json"], siblings
 
 
 TESTS = [fn for name, fn in globals().items() if name.startswith("test_") and callable(fn)]

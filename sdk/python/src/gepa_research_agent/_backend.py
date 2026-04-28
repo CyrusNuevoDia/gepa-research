@@ -26,7 +26,8 @@ class Backend(Protocol):
 
 
 class LocalBackend:
-    """Writes trace files to ``$GEPA_RESEARCH_TRACES_DIR`` and result JSON to stdout.
+    """Writes trace files to ``$GEPA_RESEARCH_TRACES_DIR`` and result JSON to
+    ``$GEPA_RESEARCH_RESULT_PATH`` (or stdout in legacy mode).
 
     Thread safety: each ``write_trace`` call writes to a unique file path
     (``task_{id}.json``), so no locking is needed.
@@ -47,7 +48,27 @@ class LocalBackend:
         path.write_text(json.dumps(trace, indent=2), encoding="utf-8")
 
     def emit_result(self, result: dict[str, Any]) -> None:
-        print(json.dumps(result, indent=2), file=self._stdout)
+        payload = json.dumps(result, indent=2)
+        result_path = os.environ.get("GEPA_RESEARCH_RESULT_PATH")
+        if not result_path:
+            print(payload, file=self._stdout)
+            return
+        target = Path(result_path)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        # Claim destination + tmp+rename: a second writer (e.g. a stray
+        # benchmark-derived gate) fails fast on the O_EXCL claim; a crash
+        # mid-publish leaves an empty file at target (caught by load_result
+        # in the runner) instead of a partial write. Same-instance double
+        # calls to Run.finish() are guarded upstream in Run._finished.
+        try:
+            os.close(os.open(target, os.O_CREAT | os.O_EXCL | os.O_WRONLY))
+        except FileExistsError:
+            raise RuntimeError(
+                f"{target} already exists; only one writer per attempt"
+            ) from None
+        tmp = target.with_name(target.name + ".tmp")
+        tmp.write_text(payload, encoding="utf-8")
+        os.replace(tmp, target)
 
     def emit_gate_summary(self, *, passed: bool, lines: list[str]) -> None:
         for line in lines:

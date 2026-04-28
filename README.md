@@ -1,6 +1,6 @@
 # GEPAResearch
 
-A plugin for your agentic framework that optimizes code using the [GEPA](https://github.com/gepa-ai/gepa) algorithm (Genetic-Pareto LLM-driven search). Currently supported on [Claude Code](https://docs.anthropic.com/en/docs/claude-code), [Codex](https://developers.openai.com/codex), [OpenClaw](https://github.com/openclaw/openclaw), and [Hermes](https://github.com/NousResearch/hermes-agent).
+A plugin for your agentic framework that optimizes code using the [GEPA](https://github.com/gepa-ai/gepa) algorithm (Genetic-Pareto LLM-driven search). Currently supported on [Claude Code](https://docs.anthropic.com/en/docs/claude-code), [Codex](https://developers.openai.com/codex), [OpenClaw](https://github.com/openclaw/openclaw), [Hermes](https://github.com/NousResearch/hermes-agent), and [Pi](https://pi.dev/) (`@mariozechner/pi-coding-agent`).
 
 You give it a codebase. It discovers metrics to optimize, sets up the evaluation, and hands the search to GEPA -- a reflection-driven evolutionary optimizer that maintains a Pareto frontier of candidates and uses an LLM to propose targeted improvements from diagnostic feedback.
 
@@ -16,17 +16,17 @@ You give it a codebase. It discovers metrics to optimize, sets up the evaluation
 
 Common: `git`, [uv](https://docs.astral.sh/uv/), Python 3.10+.
 
-### 1. Install the gepa-research CLI (non-Claude Code hosts)
+### 1. Install the gepa-research CLI when your host does not expose the bundled wrapper
 
-Claude Code bundles its own copy. Every other host calls `gepa-research` as an external binary. The CLI is not published to PyPI -- install it directly from this GitHub repo (the package lives in the `plugins/gepa-research/` subdirectory):
+Claude Code bundles its own wrapper. The Pi package below also exposes the bundled wrapper through a tiny PATH extension. Codex, OpenClaw, Hermes, and Pi with that extension disabled call `gepa-research` as an external binary. The CLI is not published to PyPI -- install it directly from this GitHub repo (the package lives in the `plugins/gepa-research/` subdirectory):
 
 ```bash
 uv tool install "git+https://github.com/CyrusNuevoDia/gepa-research#subdirectory=plugins/gepa-research"
 # or: pipx install "git+https://github.com/CyrusNuevoDia/gepa-research#subdirectory=plugins/gepa-research"
-gepa-research --version              # gepa-research-cli 0.2.2
+gepa-research --version              # gepa-research-cli 0.1.0
 ```
 
-To pin a release, append `@<tag>` to the repo URL (e.g. `...gepa-research@v0.2.2#subdirectory=...`).
+To pin a release, append `@<tag>` to the repo URL (e.g. `...gepa-research@v0.1.0#subdirectory=...`).
 
 ### 2. Add the plugin
 
@@ -64,12 +64,26 @@ hermes skills install CyrusNuevoDia/gepa-research/plugins/gepa-research/skills/o
 
 `--force` on `discover` bypasses the SKILL.md scanner (it flags gepa-research's own install examples). Invoke: `/discover`, `/optimize`.
 
+**Pi** (`@mariozechner/pi-coding-agent`)
+
+```bash
+pi install git:github.com/CyrusNuevoDia/gepa-research
+# or, from a checkout:
+pi install /path/to/gepa-research
+```
+
+The Pi package loads two wrapper skills and a tiny extension that prepends the bundled `plugins/gepa-research/bin/` wrappers to Pi's `PATH`. You still need `uv` installed because the wrapper runs the Python CLI with `uv run --project plugins/gepa-research`.
+
+Invoke: `/skill:gepa-research-discover`, `/skill:gepa-research-optimize`.
+
 ## Usage
 
-Two skills:
+Two canonical skills:
 
 - **`discover`** -- explores the repo, instruments the benchmark, runs baseline
 - **`optimize`** -- hands the benchmark to GEPA and backports candidates into the local graph
+
+Pi exposes namespaced wrapper skills (`gepa-research-discover`, `gepa-research-optimize`) that load these canonical skills, avoiding collisions with other packages' generic `discover` or `optimize` skills.
 
 Invocation syntax depends on the host -- see the Install section above.
 
@@ -80,7 +94,7 @@ Invocation syntax depends on the host -- see the Install section above.
 | `max-metric-calls` | 50      | Total evaluator calls GEPA may make this run                    |
 | `stall`            | 5       | Consecutive iterations with no improvement before auto-stopping |
 
-Example (Claude Code): `/gepa-research:optimize max-metric-calls=100 stall=10`. Other hosts use their own invocation prefix.
+Example (Claude Code): `/gepa-research:optimize max-metric-calls=100 stall=10`. Pi uses `/skill:gepa-research-optimize max-metric-calls=100 stall=10`. Other hosts use their own invocation prefix.
 
 Typical flow:
 
@@ -143,10 +157,12 @@ For working on gepa-research itself (not just using it):
 ```bash
 git clone https://github.com/CyrusNuevoDia/gepa-research
 cd gepa-research
-uv run --project plugins/gepa-research gepa-research --version   # gepa-research-cli 0.2.2
+uv run --project plugins/gepa-research gepa-research --version   # gepa-research-cli 0.1.0
 ```
 
 `uv run` resolves dependencies on first use -- no `pip install` step.
+
+The Pi package metadata lives at the repo root (`package.json`) and exposes `pi/skills/` plus `pi/extensions/gepa-research-path.js` for `pi install git:github.com/CyrusNuevoDia/gepa-research`.
 
 The SDKs live in separate packages:
 

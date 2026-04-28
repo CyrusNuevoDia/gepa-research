@@ -1,0 +1,51 @@
+{
+  "name": "gepa-research-pi",
+  "version": "0.1.0",
+  "description": "Pi package for GEPAResearch skills and CLI wrappers.",
+  "type": "module",
+  "license": "Apache-2.0",
+  "keywords": [
+    "pi-package",
+    "gepa",
+    "gepa-research",
+    "agent-skills",
+    "coding-agent",
+    "optimization"
+  ],
+  "homepage": "https://github.com/CyrusNuevoDia/gepa-research#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/CyrusNuevoDia/gepa-research.git"
+  },
+  "bugs": "https://github.com/CyrusNuevoDia/gepa-research/issues",
+  "bin": {
+    "gepa-research": "./plugins/gepa-research/bin/gepa-research",
+    "gepa-research-version-check": "./plugins/gepa-research/bin/gepa-research-version-check"
+  },
+  "files": [
+    "NOTICE",
+    "pi/",
+    "plugins/gepa-research/.claude-plugin/",
+    "plugins/gepa-research/.codex-plugin/",
+    "plugins/gepa-research/bin/",
+    "plugins/gepa-research/skills/",
+    "plugins/gepa-research/src/gepa_research/*.py",
+    "plugins/gepa-research/src/gepa_research/static/",
+    "plugins/gepa-research/pyproject.toml",
+    "plugins/gepa-research/uv.lock",
+    "plugins/gepa-research/README.md",
+    "plugins/gepa-research/LICENSE",
+    "plugins/gepa-research/NOTICE"
+  ],
+  "pi": {
+    "extensions": [
+      "./pi/extensions/gepa-research-path.js"
+    ],
+    "skills": [
+      "./pi/skills"
+    ]
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

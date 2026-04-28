@@ -18,6 +18,7 @@ from .core import (
     allocate_experiment,
     atomic_write_json,
     attempt_dir,
+    attempt_result_path,
     attempt_traces_dir,
     collect_gates_from_path,
     compare_scores,
@@ -25,10 +26,10 @@ from .core import (
     load_config,
     load_graph,
     load_json,
+    load_result,
     lock_file_for,
     maybe_commit_worktree,
     node_target_path,
-    parse_score,
     relative_target,
     resolve_parent_score,
     update_node,
@@ -137,6 +138,7 @@ class GepaResearchAdapter:
         a_dir.mkdir(parents=True, exist_ok=True)
         traces_dir = attempt_traces_dir(self._root, exp_id, attempt_n)
         traces_dir.mkdir(parents=True, exist_ok=True)
+        result_path = attempt_result_path(self._root, exp_id, attempt_n)
 
         benchmark_cmd = fill_command_template(config["benchmark"], target=target, worktree=worktree)
         env = os.environ.copy()
@@ -144,6 +146,7 @@ class GepaResearchAdapter:
         env["GEPA_RESEARCH_WORKTREE"] = str(worktree)
         env["GEPA_RESEARCH_EXPERIMENT_ID"] = exp_id
         env["GEPA_RESEARCH_ATTEMPT"] = str(attempt_n)
+        env["GEPA_RESEARCH_RESULT_PATH"] = str(result_path)
 
         try:
             bench = _run_subprocess(benchmark_cmd, cwd=self._root, env=env, timeout=self._benchmark_timeout)
@@ -162,9 +165,9 @@ class GepaResearchAdapter:
             return _GEPA_WORST, side_info
 
         try:
-            score, parsed = parse_score(bench.stdout)
+            score, parsed = load_result(result_path, bench.stdout)
         except ValueError as exc:
-            side_info["error"] = f"parse_score_failed: {exc}"
+            side_info["error"] = f"load_result_failed: {exc}"
             self._mark_failed(exp_id, score=0.0, error=side_info["error"])
             return _GEPA_WORST, side_info
 
@@ -176,11 +179,15 @@ class GepaResearchAdapter:
         if config.get("gate"):
             inherited_gates.insert(0, {"name": "_init_gate", "command": config["gate"]})
 
+        # Strip GEPA_RESEARCH_* so an SDK-using or benchmark-derived gate can't
+        # clobber result.json or overwrite the benchmark's task_*.json traces.
+        gate_env = {k: v for k, v in env.items() if not k.startswith("GEPA_RESEARCH_")}
+
         gate_failures: list[str] = []
         for g in inherited_gates:
             gate_cmd = fill_command_template(g["command"], target=target, worktree=worktree)
             try:
-                gate_result = _run_subprocess(gate_cmd, cwd=self._root, env=env, timeout=self._benchmark_timeout)
+                gate_result = _run_subprocess(gate_cmd, cwd=self._root, env=gate_env, timeout=self._benchmark_timeout)
             except subprocess.TimeoutExpired:
                 gate_failures.append(f"{g['name']}:timeout")
                 continue

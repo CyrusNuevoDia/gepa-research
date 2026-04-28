@@ -14,7 +14,15 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT / "plugins" / "gepa-research" / "src"))
 
-from gepa_research.core import collect_gates_from_path, path_to_node  # noqa: E402
+import json
+import tempfile
+
+from gepa_research.core import (  # noqa: E402
+    collect_gates_from_path,
+    load_result,
+    parse_score,
+    path_to_node,
+)
 
 
 def _graph(*nodes: dict) -> dict:
@@ -90,6 +98,139 @@ def test_collect_gates_on_root_returns_own_only() -> None:
     graph = _graph(_node("root", None, gates=[_gate("core_tests")]))
     gates = collect_gates_from_path(graph, "root")
     assert [g["name"] for g in gates] == ["core_tests"]
+
+
+# ---- parse_score (strict): one JSON object with 'score' or raise -------- #
+
+def test_parse_score_accepts_clean_json_object() -> None:
+    score, parsed = parse_score('{"score": 0.75, "tasks": {"0": 1.0}}')
+    assert score == 0.75
+    assert parsed == {"score": 0.75, "tasks": {"0": 1.0}}
+
+
+def test_parse_score_accepts_indented_multiline_json() -> None:
+    score, parsed = parse_score('{\n  "score": 0.5,\n  "tasks": {}\n}')
+    assert score == 0.5
+    assert parsed["tasks"] == {}
+
+
+def test_parse_score_rejects_empty() -> None:
+    try:
+        parse_score("")
+    except ValueError as exc:
+        assert "empty" in str(exc).lower()
+    else:
+        raise AssertionError("expected ValueError on empty stdout")
+
+
+def test_parse_score_rejects_bare_number() -> None:
+    # Used to be accepted by the loose fallbacks; strict parser must reject.
+    try:
+        parse_score("0.42")
+    except ValueError as exc:
+        assert "missing 'score'" in str(exc) or "not a single JSON" in str(exc).lower() or "JSON missing" in str(exc)
+    else:
+        raise AssertionError("expected ValueError on bare number")
+
+
+def test_parse_score_rejects_score_colon_regex() -> None:
+    # Used to match `score: 0.5` via regex; strict parser must reject.
+    try:
+        parse_score("INFO: completed\nscore: 0.5\n")
+    except ValueError as exc:
+        msg = str(exc)
+        assert "JSON" in msg or "single JSON object" in msg
+    else:
+        raise AssertionError("expected ValueError on 'score: 0.5' line")
+
+
+def test_parse_score_rejects_last_line_json_with_noise_above() -> None:
+    # Used to scan lines bottom-up and accept the last parseable JSON line.
+    noisy = 'WARN: slow\n{"unrelated": true}\n{"score": 0.9}\n'
+    try:
+        parse_score(noisy)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("expected ValueError on multi-line stdout with noise")
+
+
+def test_parse_score_rejects_json_object_without_score() -> None:
+    try:
+        parse_score('{"tasks": {"0": 1.0}}')
+    except ValueError as exc:
+        assert "score" in str(exc)
+    else:
+        raise AssertionError("expected ValueError on object missing 'score'")
+
+
+# ---- load_result: file wins (strict) when present, else parse_score ------ #
+
+def test_load_result_reads_file_when_present() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "result.json"
+        path.write_text('{"score": 0.81, "tasks": {"0": 1.0, "1": 0.62}}')
+        score, parsed = load_result(path, "noisy stdout that should be ignored")
+        assert score == 0.81
+        assert parsed["tasks"]["1"] == 0.62
+
+
+def test_load_result_falls_back_to_stdout_when_file_absent() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "result.json"
+        score, parsed = load_result(path, '{"score": 0.33}')
+        assert score == 0.33
+        assert parsed == {"score": 0.33}
+
+
+def test_load_result_raises_on_empty_file() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "result.json"
+        path.write_text("")
+        try:
+            load_result(path, '{"score": 0.5}')
+        except ValueError as exc:
+            assert "empty" in str(exc) and "crashed" in str(exc)
+        else:
+            raise AssertionError("expected ValueError on empty file")
+
+
+def test_load_result_raises_on_malformed_file() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "result.json"
+        path.write_text("not json")
+        try:
+            load_result(path, '{"score": 0.5}')
+        except ValueError as exc:
+            assert "not valid JSON" in str(exc)
+        else:
+            raise AssertionError("expected ValueError on malformed file")
+
+
+def test_load_result_raises_on_missing_score_field_in_file() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "result.json"
+        path.write_text(json.dumps({"tasks": {"0": 1.0}}))
+        try:
+            load_result(path, '{"score": 0.5}')
+        except ValueError as exc:
+            assert "missing 'score'" in str(exc)
+        else:
+            raise AssertionError("expected ValueError on file missing 'score'")
+
+
+def test_load_result_does_not_fall_back_when_file_present_but_invalid() -> None:
+    # Critical: an invalid file must NOT silently fall through to stdout —
+    # that would mask a real benchmark bug.
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "result.json"
+        path.write_text('{"unrelated": 1}')
+        try:
+            load_result(path, '{"score": 0.99}')
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("must not fall back to stdout when file present and bad")
 
 
 TESTS = [fn for name, fn in globals().items() if name.startswith("test_") and callable(fn)]

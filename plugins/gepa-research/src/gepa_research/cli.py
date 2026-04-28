@@ -22,6 +22,7 @@ from .core import (
     attempt_dir,
     attempt_log_path,
     attempt_outcome_path,
+    attempt_result_path,
     attempt_traces_dir,
     best_committed_node,
     collect_gates_from_path,
@@ -38,11 +39,11 @@ from .core import (
     load_annotations,
     load_config,
     load_graph,
+    load_result,
     lock_file_for,
     mark_comparison_blocked,
     maybe_commit_worktree,
     node_target_path,
-    parse_score,
     path_to_node,
     relative_target,
     remove_gate,
@@ -363,6 +364,7 @@ def run(
     traces_dir.mkdir(parents=True, exist_ok=True)
     benchmark_log = a_dir / "benchmark.log"
     benchmark_err = a_dir / "benchmark_err.log"
+    result_path = attempt_result_path(root, exp_id, attempt_n)
     metric = config["metric"]
     parent_score = _resolve_parent_score(graph, node["parent"])
 
@@ -372,6 +374,7 @@ def run(
     env["GEPA_RESEARCH_WORKTREE"] = str(worktree)
     env["GEPA_RESEARCH_EXPERIMENT_ID"] = exp_id
     env["GEPA_RESEARCH_ATTEMPT"] = str(attempt_n)
+    env["GEPA_RESEARCH_RESULT_PATH"] = str(result_path)
 
     # Captured before the benchmark runs so it survives crashes too.
     parent_ref = current_branch(root) if node["parent"] == "root" else _read_node(root, node["parent"])["branch"]
@@ -391,7 +394,7 @@ def run(
             benchmark_record = {"command": benchmark_cmd, "returncode": bench.returncode, "result": None}
             raise RuntimeError(f"benchmark_exit_{bench.returncode}")
 
-        score, parsed = parse_score(bench.stdout)
+        score, parsed = load_result(result_path, bench.stdout)
         benchmark_record = {"command": benchmark_cmd, "returncode": 0, "result": parsed}
 
         gate_passed = True
@@ -408,11 +411,17 @@ def run(
             for g in chain_node.get("gates", []):
                 gate_origins.setdefault(g["name"], chain_node["id"])
 
+        # Strip GEPA_RESEARCH_* so an SDK-using or benchmark-derived gate
+        # (e.g. the --min-score pattern in constructing-benchmark.md) can't
+        # clobber result.json or overwrite the benchmark's task_*.json traces.
+        # Gates get path context via {target}/{worktree} template substitution.
+        gate_env = {k: v for k, v in env.items() if not k.startswith("GEPA_RESEARCH_")}
+
         for g in inherited_gates:
             gate_cmd = fill_command_template(g["command"], target=target, worktree=worktree)
             gate_log_file = a_dir / f"gate_{g['name']}.log"
             try:
-                gate_result = _run_command(gate_cmd, cwd=root, env=env, stdout_path=gate_log_file, stderr_path=gate_log_file, timeout=timeout)
+                gate_result = _run_command(gate_cmd, cwd=root, env=gate_env, stdout_path=gate_log_file, stderr_path=gate_log_file, timeout=timeout)
             except subprocess.TimeoutExpired:
                 gate_records.append({
                     "name": g["name"],

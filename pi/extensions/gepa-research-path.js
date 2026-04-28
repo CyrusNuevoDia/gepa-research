@@ -5,7 +5,10 @@ const extensionDir = path.dirname(fileURLToPath(import.meta.url));
 const packageRoot = path.resolve(extensionDir, "../..");
 const bundledBinDir = path.join(packageRoot, "plugins", "gepa-research", "bin");
 
-export default function gepaResearchPathExtension() {
+// Pi invokes default-exported extension factories during startup, before tools
+// spawn subprocesses. The ExtensionAPI argument is intentionally unused here:
+// the only setup needed is making the bundled CLI wrappers visible on PATH.
+export default function gepaResearchPathExtension(_api) {
   const currentPath = process.env.PATH ?? "";
   const entries = currentPath.split(path.delimiter);
 

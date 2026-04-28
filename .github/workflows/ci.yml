@@ -23,8 +23,15 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
       - name: Validate Pi package manifest
         run: python3 scripts/check_pi_package.py
+      - name: Validate Pi extension
+        run: |
+          node --check pi/extensions/gepa-research-path.js
+          node scripts/check_pi_extension.mjs
 
   cli-wheel-assets:
     runs-on: ubuntu-latest

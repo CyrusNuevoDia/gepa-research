@@ -29,7 +29,7 @@
     "plugins/gepa-research/.codex-plugin/",
     "plugins/gepa-research/bin/",
     "plugins/gepa-research/skills/",
-    "plugins/gepa-research/src/gepa_research/*.py",
+    "plugins/gepa-research/src/gepa_research/**/*.py",
     "plugins/gepa-research/src/gepa_research/static/",
     "plugins/gepa-research/pyproject.toml",
     "plugins/gepa-research/uv.lock",

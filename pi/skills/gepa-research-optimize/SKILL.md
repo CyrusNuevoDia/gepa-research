@@ -10,7 +10,7 @@ This is the Pi-friendly entry point for GEPAResearch optimization. It exists bec
 
 ## Procedure
 
-1. Read `../../../plugins/gepa-research/skills/optimize/SKILL.md` completely.
+1. Resolve `../../../plugins/gepa-research/skills/optimize/SKILL.md` relative to this `SKILL.md`, then read it completely.
 2. Follow that canonical skill exactly, with these Pi conventions:
    - User-facing invocation is `/skill:gepa-research-optimize`.
    - The companion Pi extension prepends `plugins/gepa-research/bin` to `PATH`, so `gepa-research` and `gepa-research-version-check` should resolve inside Pi's bash tool when `uv` is installed.

@@ -1,5 +1,9 @@
 # GEPAResearch
 
+<!-- yarkr:badges:start -->
+[![Indexed on Yarkr](https://api.yarkr.com/functions/v1/api/api/v1/badges/repos/CyrusNuevoDia/gepa-research/version.svg)](https://yarkr.com/arks/cyrusnuevodia/gepa-research)
+<!-- yarkr:badges:end -->
+
 A plugin for your agentic framework that optimizes code using the [GEPA](https://github.com/gepa-ai/gepa) algorithm (Genetic-Pareto LLM-driven search). Currently supported on [Claude Code](https://docs.anthropic.com/en/docs/claude-code), [Codex](https://developers.openai.com/codex), [OpenClaw](https://github.com/openclaw/openclaw), and [Hermes](https://github.com/NousResearch/hermes-agent).
 
 You give it a codebase. It discovers metrics to optimize, sets up the evaluation, and hands the search to GEPA -- a reflection-driven evolutionary optimizer that maintains a Pareto frontier of candidates and uses an LLM to propose targeted improvements from diagnostic feedback.
@@ -63,6 +67,39 @@ hermes skills install CyrusNuevoDia/gepa-research/plugins/gepa-research/skills/o
 ```
 
 `--force` on `discover` bypasses the SKILL.md scanner (it flags gepa-research's own install examples). Invoke: `/discover`, `/optimize`.
+
+<!-- yarkr:install:start -->
+## Install with Yarkr
+
+This repo is indexed on [Yarkr](https://yarkr.com/arks/cyrusnuevodia/gepa-research) as the ark [cyrusnuevodia/gepa-research](https://yarkr.com/arks/cyrusnuevodia/gepa-research), so its skills install into Claude Code, Codex, Cursor and other agent harnesses with one command.
+
+### CLI
+
+Install the whole ark, which Yarkr keeps equal to this repo:
+
+```bash
+npx yarkr-cli sync cyrusnuevodia/gepa-research
+```
+
+Or add individual skills:
+
+```bash
+npx yarkr-cli add skill:cyrusnuevodia/gepa-research/discover
+npx yarkr-cli add skill:cyrusnuevodia/gepa-research/optimize
+```
+
+No Node.js? `curl -fsSL https://yarkr.com/install.sh | sh` (macOS, Linux) or `irm https://yarkr.com/install.ps1 | iex` (Windows PowerShell) installs `yarkr` as a standalone binary; then type `yarkr` in place of `npx yarkr-cli`.
+
+### MCP
+
+Connect your agent to the ark over MCP:
+
+```bash
+npx yarkr-cli mcp add cyrusnuevodia/gepa-research
+```
+
+Or point any MCP client at `https://api.yarkr.com/functions/v1/api/mcp/o/cyrusnuevodia/gepa-research`.
+<!-- yarkr:install:end -->
 
 ## Usage
 
